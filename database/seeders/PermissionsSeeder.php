@@ -26,15 +26,16 @@ class PermissionsSeeder extends Seeder
         'funcionarios' => [
             'registrar',
             'editar',
-            'visualizar_local',
-            'visualizar_global',
+            'visualizar',
             'excluir',
         ],
+        'dados_contratos' => [
+            'registrar',
+            'editar',
+        ],
         'digitais' => [
-            'registrar_local',
-            'registrar_global',
-            'excluir_local',
-            'excluir_global',
+            'registrar',
+            'excluir',
         ],
         'usuarios' => [
             'registrar',
@@ -45,12 +46,10 @@ class PermissionsSeeder extends Seeder
         'ponto' => [
             'registrar',
             'visualizar',
-            'visualizar_dados_local',
-            'visualizar_dados_global',
+            'visualizar_dados',
         ],
         'relacao_funcionarios' => [
-            'visualizar_local',
-            'visualizar_global',
+            'visualizar',
         ],
         'unidades' => [
             'criar',
@@ -58,11 +57,17 @@ class PermissionsSeeder extends Seeder
             'visualizar',
             'excluir',
         ],
+        'localidades' => [
+            'criar',
+            'atualizar',
+            'visualizar',
+            'excluir',
+        ],
         'justificativas' => [
             'registrar',
-            'aceitar_recusar',
-            'visualizar_local',
-            'visualizar_global',
+            'visualizar',
+            'editar',
+            'excluir',
         ],
     ];
 

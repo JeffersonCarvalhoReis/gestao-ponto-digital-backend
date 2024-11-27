@@ -12,7 +12,7 @@ class Justificativa extends Model
         'motivo',
         'anexo',
         'status',
-        'funcionario',
+        'funcionario_id',
     ];
     public function funcionario()
     {

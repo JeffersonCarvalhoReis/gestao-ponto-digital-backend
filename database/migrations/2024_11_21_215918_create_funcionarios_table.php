@@ -16,10 +16,6 @@ return new class extends Migration
             $table->string('nome');
             $table->date('data_nascimento');
             $table->string('cpf')->unique();
-            $table->string('vinculo');
-            $table->integer('carga_horaria');
-            $table->date('data_admissao');
-            $table->decimal('salario_base', 10, 2);
             $table->string('foto')->nullable();
             $table->foreignId('cargo_id')->nullable()->constrained()->onDelete('set null');
             $table->foreignId('unidade_id')->nullable()->constrained()->onDelete('set null');

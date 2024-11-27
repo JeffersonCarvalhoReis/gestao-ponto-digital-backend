@@ -11,7 +11,7 @@ class StoreFuncionarioRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        return true;
     }
 
     /**
@@ -22,7 +22,12 @@ class StoreFuncionarioRequest extends FormRequest
     public function rules(): array
     {
         return [
-            //
+            'nome' => 'required|string|max:255',
+            'data_nascimento' => 'required|date_format:d/m/Y',
+            'cpf' => 'required|string|max:14|unique:funcionarios,cpf',
+            'foto' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'unidade_id' => 'required|exists:unidades,id',
+            'cargo_id' => 'required|exists:cargos,id',
         ];
     }
 }

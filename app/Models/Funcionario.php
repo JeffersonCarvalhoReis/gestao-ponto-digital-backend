@@ -14,10 +14,6 @@ class Funcionario extends Model
         'nome',
         'data_nascimento',
         'cpf',
-        'vinculo',
-        'carga_horaria',
-        'data_admissao',
-        'salario_base',
         'foto',
         'cargo_id',
         'unidade_id'
@@ -39,6 +35,11 @@ class Funcionario extends Model
     public function biometria()
     {
         return $this->hasOne(Biometria::class);
+    }
+
+    public function dadosContrato()
+    {
+        return $this->hasOne(DadosContrato::class);
     }
     public function justificativas()
     {

@@ -13,8 +13,8 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // // User::factory(10)->create();
-          // Criar localidades
+        // User::factory(10)->create();
+        //   Criar localidades
         //   $localidades = \App\Models\Localidade::factory(5)->create();
 
         //   // Criar cargos
@@ -37,6 +37,13 @@ class DatabaseSeeder extends Seeder
         //           'funcionario_id' => $funcionario->id,
         //       ]);
         //   });
+
+        //   $funcionarios->each(function ($funcionario) {
+        //     \App\Models\DadosContrato::factory()->create([
+        //         'funcionario_id' => $funcionario->id,
+        //     ]);
+        // });
+
 
         //   // Criar justificativas para alguns funcionários (opcional)
         //   \App\Models\Justificativa::factory(15)->create([

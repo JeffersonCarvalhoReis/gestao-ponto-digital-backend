@@ -30,26 +30,31 @@ class RolesSeeder extends Seeder
                'editar_cargos',
                'excluir_cargos',
                'registrar_funcionarios',
-               'visualizar_global_funcionarios',
+               'visualizar_funcionarios',
                'editar_funcionarios',
                'excluir_funcionarios',
-               'registrar_global_digitais',
-               'excluir_global_digitais',
+               'registrar_dados_contratos',
+               'visualizar_dados_contratos',
+               'editar_dados_contratos',
+               'excluir_dados_contratos',
+               'registrar_digitais',
+               'excluir_digitais',
                'registrar_usuarios',
                'visualizar_usuarios',
                'editar_usuarios',
                'excluir_usuarios',
                'registrar_ponto',
                'visualizar_ponto',
-               'visualizar_global_ponto',
-               'visualizar_global_relacao_funcionarios',
+               'visualizar_ponto',
+               'visualizar_relacao_funcionarios',
                'criar_unidades',
                'visualizar_unidades',
                'atualizar_unidades',
                'excluir_unidades',
                'registrar_justificativas',
-               'aceitar_recusar_justificativas',
-               'visualizar_global_justificativas',
+               'excluir_justificativas',
+               'editar_justificativas',
+               'visualizar_justificativas',
 
             ]);
         });
@@ -58,14 +63,16 @@ class RolesSeeder extends Seeder
         $gestorPermissions = $permissions->filter(function($permission){
             return in_array($permission->name, [
 
-                'registrar_local_digitais',
-                'excluir_local_digitais',
+                'registrar_digitais',
+                'excluir_digitais',
                 'registrar_ponto',
                 'visualizar_ponto',
-                'visualizar_local_ponto',
-                'visualizar_local_relacao_funcionarios',
+                'visualizar_ponto',
+                'visualizar_funcionarios',
                 'registrar_justificativas',
-                'visualizar_local_justificativas',
+                'excluir_justificativas',
+                'editar_justificativas',
+                'visualizar_justificativas',
 
             ]);
         });
@@ -79,6 +86,10 @@ class RolesSeeder extends Seeder
             'registrar_ponto',
             'visualizar_ponto',
             'registrar_justificativas',
+            'registrar_justificativas',
+            'excluir_justificativas',
+            'editar_justificativas',
+            'visualizar_justificativas',
 
             ]);
         });

@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
@@ -20,12 +22,19 @@ class UserController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $users = User::with('roles')->get();
-        $users = $users->filter( function($user){
-            return !$user->roles->contains('name', 'super admin');
-        });
+        $query =  User::with('roles')
+        ->with('unidade')
+        ->whereDoesntHave('roles', fn ($query) => $query->where('name', 'super admin'));
+
+        if($request->has('nome')) {
+            $nome = $request->input('nome');
+            $query->where('name', 'like', "%$nome%");
+        }
+        $users = $query->get();
+        $users = UserResource::collection($users);
+
         return response()->json($users, 200);
     }
 
@@ -51,6 +60,7 @@ class UserController extends Controller
 
         ]);
         $user->assignRole($request->funcao);
+        $user = new UserResource($user);
 
         return response()->json(['message' => 'Usuário criado com sucesso.', 'user' => $user], 201);
 
@@ -61,33 +71,21 @@ class UserController extends Controller
      */
     public function show(string $id)
     {
-        $user = User::with('roles')->findOrFail($id);
+        $user = User::with('roles')->with('unidade')->findOrFail($id);
+
+        $user = new UserResource($user);
+
         return response()->json($user, 200);
     }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
 
     /**
      * Update the specified resource in storage.
      */
     public function update(Request $request, string $id)
     {
-        $user = Auth::user();
 
         $userToUpdate = User::with('roles')->findOrFail($id);
-
-        if ($user->id !== $userToUpdate->id && $user->roles->contains('name', 'super admin')) {
-            return response()->json(['error' => 'Super administradores não podem editar outros super administradores.'], 403);
-        }
-
-        // Impede que administradores editem outros administradores ou super administradores
-        if ($userToUpdate->hasRole(['admin', 'super admin']) && $user->id !== $userToUpdate->id) {
-            return response()->json(['error' => 'Não é permitido editar usuários administradores ou super administradores.'], 403);
-        }
-
-
+        Gate::authorize('update', $userToUpdate);
 
         $request->validate([
             'nome' => 'sometimes|string|max:255',
@@ -97,18 +95,25 @@ class UserController extends Controller
             'unidade' => 'sometimes|numeric|exists:unidades,id',
         ]);
 
-        $userToUpdate->update(array_filter([
-            'name' => $request->nome ?? null,
-            'email' => $request->email ?? null,
-            'password' => isset($request->senha) ? Hash::make($request->senha) : null,
-            'unidade_id' => $request->unidade ?? null,
-        ]));
+        $data = [
+            'name' => $request->nome,
+            'email' => $request->email,
+            'unidade_id' => $request->unidade,
+        ];
+
+        if(!empty($request->senha)){
+            $data['password'] = Hash::make($request->senha);
+        }
+
+        $userToUpdate->update($data);
 
         if(isset($request->funcao)){
             $userToUpdate->syncRoles($request->funcao);
         }
 
-        return response()->json(['message' => 'Usuário atualizado com sucesso', 'user' => $userToUpdate, 'role' => $userToUpdate->roles->pluck('name')], 200);
+        $userToUpdate = new UserResource($userToUpdate);
+
+        return response()->json(['message' => 'Usuário atualizado com sucesso', 'user' => $userToUpdate], 200);
 
     }
 
@@ -117,21 +122,9 @@ class UserController extends Controller
      */
     public function destroy(string $id)
     {
-        $user = Auth::user();
+        $userToDelete = User::findOrFail($id);
+        Gate::authorize('delete', $userToDelete);
 
-        $userToDelete = User::with('roles')->findOrFail($id);
-
-
-        if ($user->roles->contains('name', 'super admin') && !$userToDelete->hasRole('super admin') ) {
-
-            $userToDelete->delete();
-
-            return response()->json(['message' => 'Usuário excluído com sucesso.'], 200);
-        }
-
-        if ($userToDelete->hasRole('admin') || $userToDelete->hasRole('super admin')) {
-            return response()->json(['error' => 'Não é permitido excluir usuários administradores.'], 403);
-        }
         $userToDelete->delete();
 
         return response()->json(['message' => 'Usuário excluído com sucesso.'], 200);

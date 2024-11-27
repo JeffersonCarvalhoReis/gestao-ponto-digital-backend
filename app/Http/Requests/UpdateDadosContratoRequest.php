@@ -4,7 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class UpdateFuncionarioRequest extends FormRequest
+class UpdateDadosContratoRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -22,12 +22,11 @@ class UpdateFuncionarioRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'nome' => 'sometimes|string|max:255',
-            'data_nascimento' => 'sometimes|date_format:d/m/Y',
-            'cpf' => 'sometimes|string|max:14|unique:funcionarios,cpf',
-            'foto' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'unidade_id' => 'sometimes|exists:unidades,id',
-            'cargo_id' => 'sometimes|exists:cargos,id',
+           'vinculo' => 'sometimes|string|max:50',
+            'carga_horaria' => 'sometimes|integer|min:1',
+            'data_admissao' => 'sometimes|date_format:d/m/Y',
+            'salario_base' => 'sometimes|numeric|min:0',
+            'funcionario_id' => 'sometimes|exists:funcionarios,id'
         ];
     }
 }

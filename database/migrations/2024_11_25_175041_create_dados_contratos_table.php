@@ -11,11 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('registro_pontos', function (Blueprint $table) {
+        Schema::create('dados_contratos', function (Blueprint $table) {
             $table->id();
-            $table->time('hora_entrada');
-            $table->time('hora_saida')->nullable();
-            $table->date('data');
+            $table->string('vinculo');
+            $table->integer('carga_horaria');
+            $table->date('data_admissao');
+            $table->decimal('salario_base', 10, 2);
             $table->foreignId('funcionario_id')->constrained()->onDelete('cascade');
             $table->timestamps();
         });
@@ -26,6 +27,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('registro_pontos');
+        Schema::dropIfExists('dados_contratos');
     }
 };

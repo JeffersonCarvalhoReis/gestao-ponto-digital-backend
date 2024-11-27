@@ -2,65 +2,148 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Funcionario;
 use App\Http\Requests\StoreFuncionarioRequest;
 use App\Http\Requests\UpdateFuncionarioRequest;
+use App\Http\Resources\FuncionarioResource;
+use App\Models\Funcionario;
+use Carbon\Carbon;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class FuncionarioController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
+    public function __construct()
     {
-        //
+        $this->middleware('permission:visualizar_funcionarios')->only('index');
+        $this->middleware('permission:registrar_funcionarios')->only('store');
+        $this->middleware('permission:visualizar_funcionarios')->only('show');
+        $this->middleware('permission:editar_funcionarios')->only('update');
+        $this->middleware('permission:excluir_funcionarios')->only('destroy');
+
+    }
+    public function index(Request $request)
+    {
+        $query = Funcionario::with('dadosContrato');
+
+        $user = auth()->user();
+
+        if (!$user->hasAnyRole(['admin', 'super admin'])) {
+            $query->where('unidade_id', $user->unidade_id);
+        }
+
+        if ($request->filled('nome')) {
+            $query->where('nome', 'like', "%$request->nome%");
+        }
+
+        if ($request->filled('vinculo')) {
+            $query->whereHas('dadosContrato', function($q) use ($request){
+                $q->where('vinculo', 'like', "%$request->vinculo%");
+            });
+        }
+
+        if ($request->filled('unidade_id')) {
+            $query->whereHas('unidade', function ($q) use ($request) {
+                $q->where('nome', 'like', "%$request->unidade%");
+            });
+        }
+
+        if ($request->filled('cargo_id')) {
+            $query->whereHas('cargo', function ($q) use ($request) {
+                $q->where('nome', 'like', "%$request->cargo%");
+            });
+        }
+
+        $funcionarios = $query->get();
+        $funcionarios = FuncionarioResource::collection($funcionarios);
+
+        return response()->json($funcionarios, 200);
+
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
+    public function show($id)
     {
-        //
+            $user = auth()->user();
+
+            $funcionario = Funcionario::findOrFail($id);
+
+            if(!$user->hasAnyRole(['admin', 'super admin']) && $funcionario->unidade_id !== $user->unidade_id ) {
+
+                    return response()->json(['message' => 'Acesso não autorizado'], 403);
+            }
+
+            $funcionario = new FuncionarioResource($funcionario);
+            return response()->json($funcionario, 200);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(StoreFuncionarioRequest $request)
     {
-        //
+        $data = $request->validated();
+
+        $data['data_nascimento'] = Carbon::createFromFormat('d/m/Y', $data['data_nascimento'])->format('Y-m-d');
+        $data['data_admissao'] = Carbon::createFromFormat('d/m/Y', $data['data_admissao'])->format('Y-m-d');
+
+        if ($request->hasFile('foto')) {
+            $data['foto'] = $request->file('foto')->store('fotos_funcionarios', 'public');
+        }
+
+        $funcionario = Funcionario::create($data);
+        $funcionario = new FuncionarioResource($funcionario);
+
+        return response()->json(['message' => 'Funcionário criado com sucesso.', 'Funcionario' => $funcionario], 201);
+
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(Funcionario $funcionario)
+    public function update(UpdateFuncionarioRequest $request, string $id)
     {
-        //
+        $user = auth()->user();
+
+        $funcionario = Funcionario::findOrFail($id);
+
+        if(!$user->hasAnyRole(['admin', 'super admin']) && $funcionario->unidade_id !== $user->unidade_id ) {
+
+                return response()->json(['message' => 'Acesso não autorizado'], 403);
+        }
+
+        $data = $request->validated();
+
+        if (isset($data['data_nascimento'])) {
+            $data['data_nascimento'] = Carbon::createFromFormat('d/m/Y', $data['data_nascimento'])->format('Y-m-d');
+        }
+        if (isset($data['data_admissao'])) {
+            $data['data_admissao'] = Carbon::createFromFormat('d/m/Y', $data['data_admissao'])->format('Y-m-d');
+        }
+
+        if ($request->hasFile('foto')) {
+            if ($funcionario->foto) {
+                Storage::disk('public')->delete($funcionario->foto);
+            }
+            $data['foto'] = $request->file('foto')->store('fotos_funcionarios', 'public');
+        }
+
+        $funcionario->update($data);
+        $funcionario = new FuncionarioResource($funcionario);
+
+        return response()->json(['message' => 'Funcionário atualizado com sucesso', 'Funcionario' => $funcionario], 200);
+
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Funcionario $funcionario)
+    // Deletar um funcionário
+    public function destroy(string $id)
     {
-        //
-    }
+        $user = auth()->user();
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(UpdateFuncionarioRequest $request, Funcionario $funcionario)
-    {
-        //
-    }
+        $funcionario = Funcionario::findOrFail($id);
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(Funcionario $funcionario)
-    {
-        //
+        if(!$user->hasAnyRole(['admin', 'super admin']) && $funcionario->unidade_id !== $user->unidade_id ) {
+
+            return response()->json(['message' => 'Acesso não autorizado'], 403);
+        }
+
+        if ($funcionario->foto) {
+            Storage::disk('public')->delete($funcionario->foto);
+        }
+
+        $funcionario->delete();
+        return response()->json(['message' => 'Funcionário excluído com sucesso.'], 200);
     }
 }
