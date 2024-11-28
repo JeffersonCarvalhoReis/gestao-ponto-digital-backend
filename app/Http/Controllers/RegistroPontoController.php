@@ -3,46 +3,35 @@
 namespace App\Http\Controllers;
 
 use App\Models\RegistroPonto;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class RegistroPontoController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
-    {
-        //
-    }
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        //
-    }
+   public function registrarPonto(Request $request)
+   {
+    $funcionarioId = $request->input('funcionario_id');
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(RegistroPonto $registroPonto)
-    {
-        //
-    }
+    $registroAberto = RegistroPonto::where('funcionario_id', $funcionarioId)
+        ->whereNull('hora_saida')
+        ->first();
+    if ($registroAberto) {
+        $registroAberto->update(['hora_saida' => Carbon::now()->format('H:i:s')]);
+        return response()->json([
+            'message' => 'Hora de saída registrada com sucesso!',
+             'registro' => $registroAberto
+            ], 200);
+        }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, RegistroPonto $registroPonto)
-    {
-        //
-    }
+        $novoRegistro = RegistroPonto::create([
+            'funcionario_id' => $funcionarioId,
+            'hora_entrada' => Carbon::now()->format('H:i:s'),
+            'biometrico' => (bool)$request->input('biometrico'),
+        ]);
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(RegistroPonto $registroPonto)
-    {
-        //
-    }
+        return response()->json([
+            'message' => 'Hora de entrada registrada com sucesso!',
+            'registro' => $novoRegistro,
+        ], 200);
+   }
 }

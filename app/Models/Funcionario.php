@@ -16,7 +16,7 @@ class Funcionario extends Model
         'cpf',
         'foto',
         'cargo_id',
-        'unidade_id'
+        'unidade_id',
     ];
 
     public function cargo()
@@ -44,5 +44,10 @@ class Funcionario extends Model
     public function justificativas()
     {
         return $this->hasMany(Justificativa::class);
+    }
+
+    public function diasNaoUteis()
+    {
+        return $this->hasMany(DiaNaoUtil::class);
     }
 }

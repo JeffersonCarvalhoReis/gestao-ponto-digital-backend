@@ -22,7 +22,7 @@ class StoreDadosContratoRequest extends FormRequest
     public function rules(): array
     {
         return [
-           'vinculo' => 'required|string|max:50',
+            'vinculo' => 'required|string|max:50',
             'carga_horaria' => 'required|integer|min:1',
             'data_admissao' => 'required|date_format:d/m/Y',
             'salario_base' => 'required|numeric|min:0',

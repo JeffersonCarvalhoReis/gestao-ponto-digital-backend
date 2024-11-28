@@ -11,7 +11,7 @@ class UpdateDadosContratoRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        return true;
     }
 
     /**
@@ -26,7 +26,6 @@ class UpdateDadosContratoRequest extends FormRequest
             'carga_horaria' => 'sometimes|integer|min:1',
             'data_admissao' => 'sometimes|date_format:d/m/Y',
             'salario_base' => 'sometimes|numeric|min:0',
-            'funcionario_id' => 'sometimes|exists:funcionarios,id'
         ];
     }
 }

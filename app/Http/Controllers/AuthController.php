@@ -22,7 +22,7 @@ class AuthController extends Controller
         $user = User::where('email', $credentials['email'])->first();
 
         if(!$user || !Hash::check($credentials['password'], $user->password)) {
-            return response()->json(['massage' => 'Invalid credentials'], 401);
+            return response()->json(['massage' => 'Login ou senha invalídos'], 401);
         }
     }
 

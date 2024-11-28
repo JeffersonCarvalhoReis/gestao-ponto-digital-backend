@@ -11,12 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('registro_pontos', function (Blueprint $table) {
+        Schema::create('dias_nao_uteis', function (Blueprint $table) {
             $table->id();
-            $table->time('hora_entrada');
-            $table->time('hora_saida')->nullable();
-            $table->boolean('biometrico');
-            $table->foreignId('funcionario_id')->constrained()->onDelete('cascade');
+            $table->date('data')->unique();
+            $table->enum('tipo', ['final_de_semana', 'feriado', 'recesso', 'ferias']);
+            $table->unsignedBigInteger('funcionario_id')->nullable();
+            $table->string('descricao')->nullable();
             $table->timestamps();
         });
     }
@@ -26,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('registro_pontos');
+        Schema::dropIfExists('dias_nao_uteis');
     }
 };

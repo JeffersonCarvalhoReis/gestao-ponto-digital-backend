@@ -62,8 +62,10 @@ class UserController extends Controller
         $user->assignRole($request->funcao);
         $user = new UserResource($user);
 
-        return response()->json(['message' => 'Usuário criado com sucesso.', 'user' => $user], 201);
-
+        return response()->json([
+            'message' => 'Usuário criado com sucesso.',
+             'user' => $user
+            ], 201);
     }
 
     /**
@@ -113,8 +115,10 @@ class UserController extends Controller
 
         $userToUpdate = new UserResource($userToUpdate);
 
-        return response()->json(['message' => 'Usuário atualizado com sucesso', 'user' => $userToUpdate], 200);
-
+        return response()->json([
+            'message' => 'Usuário atualizado com sucesso',
+             'user' => $userToUpdate
+            ], 200);
     }
 
     /**
@@ -127,6 +131,8 @@ class UserController extends Controller
 
         $userToDelete->delete();
 
-        return response()->json(['message' => 'Usuário excluído com sucesso.'], 200);
+        return response()->json([
+            'message' => 'Usuário excluído com sucesso.'
+        ], 200);
     }
 }

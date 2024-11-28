@@ -56,8 +56,10 @@ class JustificativaController extends Controller
 
         $justificativa = Justificativa::create($validated);
 
-        return response()->json(['message' => 'Justificativa criada com sucesso', 'justificativa' => $justificativa], 201);
-
+        return response()->json([
+            'message' => 'Justificativa criada com sucesso',
+            'justificativa' => $justificativa
+        ], 201);
     }
 
 
@@ -89,7 +91,10 @@ class JustificativaController extends Controller
 
         $justificativa->update($validated);
 
-        return response()->json(['message' => 'Justificativa atualizada com sucesso','justificativa' => $justificativa ], 200);
+        return response()->json([
+            'message' => 'Justificativa atualizada com sucesso',
+            'justificativa' => $justificativa
+        ], 200);
     }
 
     /**
@@ -111,7 +116,8 @@ class JustificativaController extends Controller
 
         $justificativa->delete();
 
-        return response()->json(['message' => 'Justificativa excluída com sucesso'], 200);
-
+        return response()->json([
+            'message' => 'Justificativa excluída com sucesso'
+        ], 200);
     }
 }

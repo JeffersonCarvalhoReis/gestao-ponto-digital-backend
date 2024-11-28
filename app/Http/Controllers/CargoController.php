@@ -10,11 +10,11 @@ class CargoController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('permission:visualizar_cargos')->only('index');
-        $this->middleware('permission:registrar_cargos')->only('store');
-        $this->middleware('permission:visualizar_cargos')->only('show');
-        $this->middleware('permission:editar_cargos')->only('update');
-        $this->middleware('permission:excluir_cargos')->only('destroy');
+        // $this->middleware('permission:visualizar_cargos')->only('index');
+        // $this->middleware('permission:registrar_cargos')->only('store');
+        // $this->middleware('permission:visualizar_cargos')->only('show');
+        // $this->middleware('permission:editar_cargos')->only('update');
+        // $this->middleware('permission:excluir_cargos')->only('destroy');
     }
     /**
      * Display a listing of the resource.
@@ -43,8 +43,9 @@ class CargoController extends Controller
 
        Cargo::create($data);
 
-        return response()->json(['message' => 'Cargo criada com sucesso.'], 201);
-
+        return response()->json([
+            'message' => 'Cargo criado com sucesso.'
+        ], 201);
     }
 
     /**
@@ -72,8 +73,10 @@ class CargoController extends Controller
         $cargo->update($data);
         $cargo = new CargoResource($cargo);
 
-        return response()->json(['message' => 'Cargo atualizado com sucesso', 'Cargo' => $cargo], 200);
-
+        return response()->json([
+            'message' => 'Cargo atualizado com sucesso',
+            'Cargo' => $cargo
+        ], 200);
     }
 
     /**
@@ -84,7 +87,8 @@ class CargoController extends Controller
         $cargo = Cargo::findOrFail($id);
         $cargo->delete();
 
-        return response()->json(['message' => 'Cargo excluído com sucesso.'], 200);
-
+        return response()->json([
+            'message' => 'Cargo excluído com sucesso.'
+        ], 200);
     }
 }

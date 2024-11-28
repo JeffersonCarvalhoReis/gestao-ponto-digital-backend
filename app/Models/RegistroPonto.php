@@ -10,13 +10,18 @@ class RegistroPonto extends Model
     use HasFactory;
 
     protected $fillable = [
-        'data',
+        'biometrico',
         'hora_entrada',
         'hora_saida',
         'funcionario_id',
+        'relatorio_ponto_id'
     ];
     public function funcionario()
     {
         return $this->belongsTo(Funcionario::class);
+    }
+    public function relatorioPotnos()
+    {
+        return $this->belongsTo(RelatorioPonto::class);
     }
 }

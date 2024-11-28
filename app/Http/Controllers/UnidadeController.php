@@ -12,11 +12,11 @@ class UnidadeController extends Controller
 
     public function __construct()
     {
-        $this->middleware('permission:visualizar_unidades')->only('index');
-        $this->middleware('permission:registrar_unidades')->only('store');
-        $this->middleware('permission:visualizar_unidades')->only('show');
-        $this->middleware('permission:editar_unidades')->only('update');
-        $this->middleware('permission:excluir_unidades')->only('destroy');
+        // $this->middleware('permission:visualizar_unidades')->only('index');
+        // $this->middleware('permission:registrar_unidades')->only('store');
+        // $this->middleware('permission:visualizar_unidades')->only('show');
+        // $this->middleware('permission:editar_unidades')->only('update');
+        // $this->middleware('permission:excluir_unidades')->only('destroy');
     }
     /**
      * Display a listing of the resource.
@@ -40,7 +40,7 @@ class UnidadeController extends Controller
     public function store(Request $request)
     {
       $data = $request->validate([
-                'nome' => 'required|min:2',
+                'nome' => 'required|min:2|unique:unidades,nome',
                 'localidade_id' => 'required|numeric|exists:localidades,id'
         ]);
 
@@ -75,9 +75,10 @@ class UnidadeController extends Controller
             $unidade->update($data);
             $unidade = new UnidadeResource($unidade);
 
-            return response()->json(['message' => 'Unidade atualizada com sucesso', 'Unidade' => $unidade], 200);
-
-
+            return response()->json([
+                'message' => 'Unidade atualizada com sucesso',
+                 'Unidade' => $unidade
+                ], 200);
     }
 
     /**
@@ -89,7 +90,8 @@ class UnidadeController extends Controller
             $unidade = Unidade::findOrFail($id);
             $unidade->delete();
 
-            return response()->json(['message' => 'Unidade excluída com sucesso.'], 200);
-
+            return response()->json([
+                'message' => 'Unidade excluída com sucesso.'
+            ], 200);
     }
 }
