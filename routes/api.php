@@ -16,11 +16,10 @@ use App\Http\Controllers\UnidadeController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
-// Registro de Ponto
-Route::post('registro-ponto', [RegistroPontoController::class, 'registrarPonto']);
-
 Route::middleware(['auth:sanctum'])->group(function(){
 
+    // Registro de Ponto
+    Route::post('registro-ponto', [RegistroPontoController::class, 'registrarPonto']);
 
     // Biometria
     Route::get('biometria/carregar', [BiometriaController::class, 'loadToMemory']);
@@ -35,7 +34,6 @@ Route::middleware(['auth:sanctum'])->group(function(){
     Route::apiResource('/justificativas',  JustificativaController::class);
     Route::apiResource('/dia-nao-util',  DiaNaoUtilController::class);
 
-
      // Dados Contratos
      Route::post('dados-contratos', [DadosContratoController::class, 'store']);
      Route::put('dados-contratos/{id}', [DadosContratoController::class, 'update']);
@@ -48,20 +46,18 @@ Route::middleware(['auth:sanctum'])->group(function(){
     Route::get('ferias', [FeriaController::class, 'index']);
     Route::delete('ferias', [FeriaController::class, 'destroy']);
 
+    // Relatório de Pontos
+    Route::post('relatorio', [RelatorioPontoController::class, 'gerarRelatorio']);
 
-
+    // Recesso
+    Route::post('recesso', [RecessoController::class, 'store']);
+    Route::get('recesso', [RecessoController::class, 'index']);
+    Route::delete('recesso', [RecessoController::class, 'destroy']);
 
     // User (Autenticação)
     Route::get('api/user', [AuthController::class, 'user']);
 });
 
-// Relatório de Pontos
-Route::post('relatorio', [RelatorioPontoController::class, 'gerarRelatorio']);
-
-// Recesso
-Route::post('recesso', [RecessoController::class, 'store']);
-Route::get('recesso', [RecessoController::class, 'index']);
-Route::delete('recesso', [RecessoController::class, 'destroy']);
 
 
 
