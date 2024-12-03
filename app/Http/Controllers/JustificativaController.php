@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Funcionario;
 use App\Models\Justificativa;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Storage;
 
@@ -11,10 +12,10 @@ class JustificativaController extends Controller
 {
     public function __construct()
     {
-        // $this->middleware('permission:visualizar_justificativas')->only('index');
-        // $this->middleware('permission:registrar_justificativas')->only('store');
-        // $this->middleware('permission:editar_justificativas')->only('update');
-        // $this->middleware('permission:excluir_justificativas')->only('destroy');
+        $this->middleware('permission:visualizar_justificativas')->only('index');
+        $this->middleware('permission:registrar_justificativas')->only('store');
+        $this->middleware('permission:editar_justificativas')->only('update');
+        $this->middleware('permission:excluir_justificativas')->only('destroy');
     }
     /**
      * Display a listing of the resource.
@@ -48,7 +49,10 @@ class JustificativaController extends Controller
             'funcionario_id' => 'required|exists:funcionarios,id',
             'motivo' => 'required|string',
             'anexo' => 'nullable|file|mimes:jpg,jpeg,png,pdf,docx',
+            'data' => 'required|date_format:d/m/Y'
         ]);
+
+        $validated['data'] = Carbon::createFromFormat('d/m/Y', $validated['data']);
 
         if ($request->hasFile('anexo')) {
             $validated['anexo'] = $request->file('anexo')->store('justificativas', 'public');

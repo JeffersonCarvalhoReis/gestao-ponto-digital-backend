@@ -14,24 +14,30 @@ class RegistroPontoController extends Controller
 
     $registroAberto = RegistroPonto::where('funcionario_id', $funcionarioId)
         ->whereNull('hora_saida')
-        ->first();
+        ->orderBy('data_local', 'desc')->first();
     if ($registroAberto) {
-        $registroAberto->update(['hora_saida' => Carbon::now()->format('H:i:s')]);
-        return response()->json([
-            'message' => 'Hora de saída registrada com sucesso!',
-             'registro' => $registroAberto
-            ], 200);
+
+        $horaEntrada = Carbon::parse($registroAberto->data_local);
+
+        if ($horaEntrada->isToday()) {
+            $registroAberto->update(['hora_saida' => Carbon::now()]);
+            return response()->json([
+                'message' => 'Hora de saída registrada com sucesso!',
+                 'registro' => $registroAberto
+                ], 200);
+             }
         }
 
         $novoRegistro = RegistroPonto::create([
             'funcionario_id' => $funcionarioId,
-            'hora_entrada' => Carbon::now()->format('H:i:s'),
+            'hora_entrada' => Carbon::now(),
             'biometrico' => (bool)$request->input('biometrico'),
         ]);
 
         return response()->json([
             'message' => 'Hora de entrada registrada com sucesso!',
             'registro' => $novoRegistro,
+            'criado ' => $novoRegistro->created_at->timezone('America/Sao_Paulo')->format('Y-m-d H:i:s'),
         ], 200);
    }
 }

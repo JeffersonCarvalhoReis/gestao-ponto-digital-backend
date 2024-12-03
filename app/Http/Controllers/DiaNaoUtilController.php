@@ -3,11 +3,24 @@
 namespace App\Http\Controllers;
 
 use App\Models\DiaNaoUtil;
+use App\Services\DiaNaoUtilService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class DiaNaoUtilController extends Controller
 {
+    protected $service;
+
+    public function __construct(DiaNaoUtilService $service)
+    {
+        $this->service = $service;
+
+        $this->middleware('permission:visualizar_dias_nao_uteis')->only('index');
+        $this->middleware('permission:registrar_dias_nao_uteis')->only('store');
+        $this->middleware('permission:visualizar_dias_nao_uteis')->only('show');
+        $this->middleware('permission:editar_dias_nao_uteis')->only('update');
+        $this->middleware('permission:excluir_dias_nao_uteis')->only('destroy');
+    }
     /**
      * Display a listing of the resource.
      */
@@ -21,18 +34,36 @@ class DiaNaoUtilController extends Controller
      */
     public function store(Request $request)
     {
-         $validated = $request->validate([
-            'data' => 'required|date|unique:dias_nao_uteis,data',
-            'tipo' => 'required|in:final_de_semana,feriado,recesso,ferias',
-            'funcionario_id' => 'nullable|exists:funcionarios,id',
-            'descricao' => 'nullable|string',
-         ]);
+        $validated = $request->validate([
+            'data_inicio' => 'required|date_format:d/m/Y',
+            'data_fim' => 'nullable|after_or_equal:data_inicio|date_format:d/m/Y',
+            'tipo' => 'required|in:feriado,final_de_semana',
+            'descricao' => 'nullable|string'
+        ]);
 
-         $diaNaoUtil = DiaNaoUtil::create($validated);
 
-         return response()->json([
-            'message' => 'Dia nâo útil adicionado com sucesso!',
-            'data' => $diaNaoUtil
+        $dataInicio = Carbon::createFromFormat('d/m/Y', $validated['data_inicio']);
+        $dataFim = isset($validated['data_fim']) ? Carbon::createFromFormat('d/m/Y', $validated['data_fim']) : $dataInicio;
+
+
+        $datas = $dataInicio->daysUntil($dataFim)->map(function($data) use ($validated){
+            return [
+                'data' => $data->toDateString(),
+                'tipo' => $validated['tipo'],
+                'descricao' => $validated['descricao'] ?? null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+        });
+
+        DiaNaoUtil::upsert(
+            collect($datas)->toArray(),
+            ['data'],
+            ['tipo', 'descricao', 'updated_at']
+        );
+
+        return response()->json([
+            'message' => 'Dias não úteis adicionados com sucesso!',
         ], 201);
     }
 
@@ -44,15 +75,25 @@ class DiaNaoUtilController extends Controller
         $diaNaoUtil = DiaNaoUtil::findOrFail($id);
 
         $validated = $request->validate([
-            'data' => 'sometimes|date|unique:dias_nao_uteis,data,' . $diaNaoUtil->id,
-            'tipo' => 'sometimes|in:final_de_semana,feriado,recesso,ferias',
-            'funcionario_id' => 'nullable|exists:funcionarios,id',
+            'data' => 'sometimes||date_format:d/m/Y|unique:dias_nao_uteis,data,' . $diaNaoUtil->id,
+            'tipo' => 'sometimes|in:final_de_semana,feriado',
             'descricao' => 'nullable|string'
         ]);
 
-        $diaNaoUtil->update($validated);
+        if (isset($validated['data'])) {
+            $validated['data'] = Carbon::createFromFormat('d/m/Y', $validated['data'])->format('Y-m-d');
+        } else{
+            $validated['data'] = $diaNaoUtil->data;
+        }
+
+        $diaNaoUtil->upsert(
+            $validated,
+            ['data'],
+            ['tipo', 'descricao', 'updated_at']
+        );
+
         return response()->json([
-            'message' => 'Dia não útil atulizado com sucesso',
+            'message' => 'Dia não útil atualizado com sucesso',
             'data' => $diaNaoUtil
         ], 200);
     }
@@ -72,36 +113,21 @@ class DiaNaoUtilController extends Controller
 
     public function preencherFinaisDeSemana()
     {
-        $hoje = Carbon::now();
-        $fimDoAno = Carbon::now()->endOfYear();
-
-        $finaisDeSemana = [];
-        while ($hoje->lte($fimDoAno)) {
-            if($hoje->isSunday()) {
-                $finaisDeSemana[] = [
-                    'data' => $hoje->toDateString(),
-                    'tipo' => 'final_de_semana',
-                    'descricao' => 'Domingo',
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ];
-            }
-            if ($hoje->isSaturday()) {
-                $finaisDeSemana[] = [
-                    'data' => $hoje->toDateString(),
-                    'tipo' => 'final_de_semana',
-                    'descricao' => 'Sábado',
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ];
-            }
-            $hoje->addDay();
-        }
-
-        DiaNaoUtil::insert($finaisDeSemana);
+        $this->service->preencherFinaisDeSemana();
 
         return response()->json([
             'message' => 'Finais de semana adicionais automaticamente'
         ], 200);
+    }
+
+    public function preencherFeriados()
+    {
+        try {
+            $this->service->preencherFeriados();
+
+            return response()->json(['message' => 'Feriados adicionados automaticamente.'], 200);
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 500);
+        }
     }
 }

@@ -46,7 +46,6 @@ class RolesSeeder extends Seeder
                'registrar_ponto',
                'visualizar_ponto',
                'visualizar_ponto',
-               'visualizar_relacao_funcionarios',
                'criar_unidades',
                'visualizar_unidades',
                'atualizar_unidades',
@@ -55,6 +54,18 @@ class RolesSeeder extends Seeder
                'excluir_justificativas',
                'editar_justificativas',
                'visualizar_justificativas',
+               'gerar_relatorios',
+               'registrar_ferias',
+               'excluir_ferias',
+               'visualizar_ferias',
+               'registrar_recessos',
+               'excluir_recessos',
+               'visualizar_recessos',
+               'criar_dias_nao_uteis',
+               'visualizar_dias_nao_uteis',
+               'atualizar_dias_nao_uteis',
+               'excluir_dias_nao_uteis',
+               'registrar_biometria'
 
             ]);
         });
@@ -73,7 +84,8 @@ class RolesSeeder extends Seeder
                 'excluir_justificativas',
                 'editar_justificativas',
                 'visualizar_justificativas',
-
+                'gerar_relatorios',
+                'registrar_biometria'
             ]);
         });
 

@@ -10,11 +10,11 @@ class LocalidadeController extends Controller
 {
     public function __construct()
     {
-        // $this->middleware('permission:visualizar_localidades')->only('index');
-        // $this->middleware('permission:registrar_localidades')->only('store');
-        // $this->middleware('permission:visualizar_localidades')->only('show');
-        // $this->middleware('permission:editar_localidades')->only('update');
-        // $this->middleware('permission:excluir_localidades')->only('destroy');
+        $this->middleware('permission:visualizar_localidades')->only('index');
+        $this->middleware('permission:registrar_localidades')->only('store');
+        $this->middleware('permission:visualizar_localidades')->only('show');
+        $this->middleware('permission:editar_localidades')->only('update');
+        $this->middleware('permission:excluir_localidades')->only('destroy');
     }
     /**
      * Display a listing of the resource.

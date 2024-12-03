@@ -11,8 +11,8 @@ class DadosContratoController extends Controller
 {
     public function __construct()
     {
-        // $this->middleware('permission:registrar_dados-contratos')->only('store');
-        // $this->middleware('permission:editar_dados_contratos')->only('update');
+        $this->middleware('permission:registrar_dados-contratos')->only('store');
+        $this->middleware('permission:editar_dados_contratos')->only('update');
     }
      /**
      * Store a newly created resource in storage.

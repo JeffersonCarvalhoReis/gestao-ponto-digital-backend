@@ -14,11 +14,11 @@ class FuncionarioController extends Controller
 {
     public function __construct()
     {
-        // $this->middleware('permission:visualizar_funcionarios')->only('index');
-        // $this->middleware('permission:registrar_funcionarios')->only('store');
-        // $this->middleware('permission:visualizar_funcionarios')->only('show');
-        // $this->middleware('permission:editar_funcionarios')->only('update');
-        // $this->middleware('permission:excluir_funcionarios')->only('destroy');
+        $this->middleware('permission:visualizar_funcionarios')->only('index');
+        $this->middleware('permission:registrar_funcionarios')->only('store');
+        $this->middleware('permission:visualizar_funcionarios')->only('show');
+        $this->middleware('permission:editar_funcionarios')->only('update');
+        $this->middleware('permission:excluir_funcionarios')->only('destroy');
 
     }
     public function index(Request $request)

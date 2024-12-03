@@ -12,11 +12,11 @@ class UnidadeController extends Controller
 
     public function __construct()
     {
-        // $this->middleware('permission:visualizar_unidades')->only('index');
-        // $this->middleware('permission:registrar_unidades')->only('store');
-        // $this->middleware('permission:visualizar_unidades')->only('show');
-        // $this->middleware('permission:editar_unidades')->only('update');
-        // $this->middleware('permission:excluir_unidades')->only('destroy');
+        $this->middleware('permission:visualizar_unidades')->only('index');
+        $this->middleware('permission:registrar_unidades')->only('store');
+        $this->middleware('permission:visualizar_unidades')->only('show');
+        $this->middleware('permission:editar_unidades')->only('update');
+        $this->middleware('permission:excluir_unidades')->only('destroy');
     }
     /**
      * Display a listing of the resource.
@@ -41,7 +41,8 @@ class UnidadeController extends Controller
     {
       $data = $request->validate([
                 'nome' => 'required|min:2|unique:unidades,nome',
-                'localidade_id' => 'required|numeric|exists:localidades,id'
+                'localidade_id' => 'required|numeric|exists:localidades,id',
+                'cnes' => 'nullable|numeric|unique:unidades,cnes',
         ]);
 
        Unidade::create($data);
@@ -69,7 +70,8 @@ class UnidadeController extends Controller
             $unidade = Unidade::findOrFail($id);
             $data = $request->validate([
                 'nome' => 'sometimes|min:2',
-                'localidade_id' => 'sometimes|numeric|exists:localidades,id'
+                'localidade_id' => 'sometimes|numeric|exists:localidades,id',
+                'cnes' => 'sometimes|numeric|unique:unidades,cnes',
             ]);
 
             $unidade->update($data);

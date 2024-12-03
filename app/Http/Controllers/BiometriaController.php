@@ -3,65 +3,95 @@
 namespace App\Http\Controllers;
 
 use App\Models\Biometria;
-use Illuminate\Http\Request;
+use App\Models\Funcionario;
+use Illuminate\Support\Facades\Http;
 
 class BiometriaController extends Controller
 {
+    private $apiUrl = 'http://localhost:5000/apiservice/';
 
-
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
+    public function __construct()
     {
-        //
+        $this->middleware('permission:registrar_biometria')->only('captureHash');
+
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
+    public function captureHash(Funcionario $funcionario)
     {
-        //
+        $response = Http::timeout(0)->get("{$this->apiUrl}capture-hash/");
+
+        if ($response->successful()) {
+            $data = $response->json();
+
+            $template = Biometria::upsert([
+                'funcionario_id' => $funcionario->id,
+                'template' => $data['template'],
+            ],
+            ['funcionario_id'],
+            ['template', 'updated_at']
+        );
+
+            $this->deleteAll();
+            $this->loadToMemory();
+
+            return response()->json(['message' => 'Template capturado com sucesso!', 'data' => $template]);
+        }
+
+        return response()->json($response->json(), 400);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
+    public function loadToMemory()
     {
-        //
+        $unidadeId = auth()->user()->unidade_id;
+
+        $templates = Biometria::whereHas('funcionario', function ($query) use ($unidadeId) {
+        $query->where('unidade_id', $unidadeId);
+        })->get(['id', 'template'])->toArray();
+
+        $templates = Biometria::all(['id', 'template'])->toArray();
+
+
+        $response = Http::post("{$this->apiUrl}load-to-memory/", $templates);
+
+        return $response->successful()
+            ? response()->json($response->json())
+            : response()->json($response->json(), 400);
+    }
+    public function identify()
+    {
+        $response = Http::timeout(0)->get("{$this->apiUrl}identification/");
+
+        $biometria = Biometria::find($response->json(('id')));
+
+        if ($biometria) {
+
+            $funcionario = $biometria->funcionario_id;
+        }
+
+        return $biometria
+            ? response()->json(['message' => 'Biometria encontrada com sucesso', 'funcionario' => $funcionario, 'sucesso' => true], 200)
+            : response()->json(['message' => 'Biometria não encontrada', 'sucesso' => false], 404);
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(Biometria $biometria)
+    public function destroy(string $id)
     {
-        //
+
+            $biometria = Biometria::findOrFail($id);
+            $biometria->delete();
+
+            $this->deleteAll();
+            $this->loadToMemory();
+
+            return response()->json([
+                'message' => 'Biometria excluída com sucesso.'
+            ], 200);
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Biometria $biometria)
+    public function deleteAll()
     {
-        //
-    }
+        Http::get("{$this->apiUrl}delete-all-from-memory/");
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, Biometria $biometria)
-    {
-        //
-    }
+        return;
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(Biometria $biometria)
-    {
-        //
     }
 }

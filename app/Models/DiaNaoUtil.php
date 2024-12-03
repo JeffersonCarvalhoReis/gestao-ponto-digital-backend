@@ -11,7 +11,6 @@ class DiaNaoUtil extends Model
     protected $fillable = [
         'data',
         'tipo',
-        'funcionario_id',
         'descricao'
 ,    ];
 

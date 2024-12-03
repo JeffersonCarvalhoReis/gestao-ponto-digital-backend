@@ -14,8 +14,7 @@ return new class extends Migration
         Schema::create('dias_nao_uteis', function (Blueprint $table) {
             $table->id();
             $table->date('data')->unique();
-            $table->enum('tipo', ['final_de_semana', 'feriado', 'recesso', 'ferias']);
-            $table->unsignedBigInteger('funcionario_id')->nullable();
+            $table->enum('tipo', ['final_de_semana', 'feriado']);
             $table->string('descricao')->nullable();
             $table->timestamps();
         });

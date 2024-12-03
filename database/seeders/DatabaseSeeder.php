@@ -65,10 +65,13 @@ class DatabaseSeeder extends Seeder
         //     'password' => '123'
         // ]);
         $this->call([
-            // UnidadesSeeder::class,
             PermissionsSeeder::class,
             RolesSeeder::class,
-            // UsersSeeder::class,
+            LocalidadesSeeder::class,
+            CargosSeeder::class,
+            UnidadesSeeder::class,
+            FuncionarioSeeder::class,
+            UsersSeeder::class,
         ]);
     }
 }

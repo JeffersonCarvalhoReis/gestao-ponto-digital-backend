@@ -10,7 +10,8 @@ class Unidade extends Model
     use HasFactory;
     protected $fillable = [
         'nome',
-        'localidade_id'
+        'localidade_id',
+        'cnes'
     ];
     public function funcionarios()
     {
@@ -23,6 +24,11 @@ class Unidade extends Model
     public function localidade()
     {
         return $this->belongsTo(Localidade::class);
+    }
+
+    public function recessos()
+    {
+        return $this->hasMany(Recesso::class);
     }
 
 }

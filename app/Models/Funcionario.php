@@ -50,4 +50,8 @@ class Funcionario extends Model
     {
         return $this->hasMany(DiaNaoUtil::class);
     }
+    public function ferias()
+    {
+        return $this->hasMany(Feria::class);
+    }
 }

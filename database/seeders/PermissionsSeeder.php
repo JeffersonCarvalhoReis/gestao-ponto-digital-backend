@@ -48,10 +48,13 @@ class PermissionsSeeder extends Seeder
             'visualizar',
             'visualizar_dados',
         ],
-        'relacao_funcionarios' => [
-            'visualizar',
-        ],
         'unidades' => [
+            'criar',
+            'atualizar',
+            'visualizar',
+            'excluir',
+        ],
+        'dias_nao_uteis' => [
             'criar',
             'atualizar',
             'visualizar',
@@ -68,6 +71,22 @@ class PermissionsSeeder extends Seeder
             'visualizar',
             'editar',
             'excluir',
+        ],
+        'ferias' => [
+            'registrar',
+            'visualizar',
+            'excluir',
+        ],
+        'recessos' => [
+            'registrar',
+            'visualizar',
+            'excluir',
+        ],
+        'relatorios' => [
+            'gerar',
+        ],
+        'biometria' => [
+            'registrar',
         ],
     ];
 

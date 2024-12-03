@@ -14,10 +14,19 @@ class UnidadesSeeder extends Seeder
     public function run(): void
     {
         Unidade::create([
-            'nome' => 'hospital'
+            'nome' => 'Hospital',
+            'localidade_id' => 1,
+            'cnes' => '123456789'
         ]);
         Unidade::create([
-            'nome' => 'caps'
+            'nome' => 'Caps',
+            'localidade_id' => 2,
+            'cnes' => '987654321'
+        ]);
+        Unidade::create([
+            'nome' => 'Breno',
+            'localidade_id' => 3,
+            'cnes' => '45465465'
         ]);
     }
 }

@@ -23,20 +23,38 @@ class UsersSeeder extends Seeder
 
         $admin->assignRole('admin');
 
-        $gestor = User::create([
+        $gestor1 = User::create([
             'name'=> 'gestor',
             'email' => 'gestor@email.com',
             'password' => '123',
             'unidade_id' => '1'
         ]);
 
-        $gestor->assignRole('gestor');
+        $gestor1->assignRole('gestor');
+
+        $gestor2 = User::create([
+            'name'=> 'gestor2',
+            'email' => 'gestor2@email.com',
+            'password' => '123',
+            'unidade_id' => '2'
+        ]);
+
+        $gestor2->assignRole('gestor');
+
+        $gestor3 = User::create([
+            'name'=> 'gestor3',
+            'email' => 'gestor3@email.com',
+            'password' => '123',
+            'unidade_id' => '3'
+        ]);
+
+        $gestor3->assignRole('gestor');
 
         $user = User::create([
             'name'=> 'user',
             'email' => 'user@email.com',
             'password' => '123',
-            'unidade_id' => '2'
+            'unidade_id' => '1'
         ]);
 
         $user->assignRole('user');

@@ -11,12 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('biometrias', function (Blueprint $table) {
-            $table->id();
-            $table->text('template');
-            $table->foreignId('funcionario_id')->constrained()->onDelete('cascade');
-            $table->unique('funcionario_id');
-            $table->timestamps();
+        Schema::table('unidades', function (Blueprint $table) {
+            $table->integer('cnes')->nullable();
         });
     }
 
@@ -25,6 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('biometrias');
+        Schema::table('unidades', function (Blueprint $table) {
+            $table->dropColumn('cnes');
+        });
     }
 };

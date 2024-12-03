@@ -16,6 +16,18 @@ class RegistroPonto extends Model
         'funcionario_id',
         'relatorio_ponto_id'
     ];
+
+    protected static function booted()
+{
+    static::creating(function ($registro) {
+        $registro->data_local = now()->timezone('America/Sao_Paulo')->format('Y-m-d');
+    });
+
+    static::updating(function ($registro) {
+        $registro->data_local = now()->timezone('America/Sao_Paulo')->format('Y-m-d');
+    });
+}
+
     public function funcionario()
     {
         return $this->belongsTo(Funcionario::class);

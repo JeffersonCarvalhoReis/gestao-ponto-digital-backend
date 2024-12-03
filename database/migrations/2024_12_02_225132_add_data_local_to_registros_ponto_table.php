@@ -11,12 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('biometrias', function (Blueprint $table) {
-            $table->id();
-            $table->text('template');
-            $table->foreignId('funcionario_id')->constrained()->onDelete('cascade');
-            $table->unique('funcionario_id');
-            $table->timestamps();
+        Schema::table('registro_pontos', function (Blueprint $table) {
+            $table->date('data_local')->nullable()->after('hora_entrada');
+
         });
     }
 
@@ -25,6 +22,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('biometrias');
+        Schema::table('registro_pontos', function (Blueprint $table) {
+            $table->dropColumn('data_local');
+        });
     }
 };

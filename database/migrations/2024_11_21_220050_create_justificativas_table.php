@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->text('motivo');
             $table->string('anexo')->nullable();
+            $table->date('data');
             $table->enum('status', ['pendente', 'aprovada', 'reprovada'])->default('pendente');
             $table->foreignId('funcionario_id')->constrained()->onDelete('cascade');
             $table->timestamps();

@@ -10,11 +10,11 @@ class CargoController extends Controller
 {
     public function __construct()
     {
-        // $this->middleware('permission:visualizar_cargos')->only('index');
-        // $this->middleware('permission:registrar_cargos')->only('store');
-        // $this->middleware('permission:visualizar_cargos')->only('show');
-        // $this->middleware('permission:editar_cargos')->only('update');
-        // $this->middleware('permission:excluir_cargos')->only('destroy');
+        $this->middleware('permission:visualizar_cargos')->only('index');
+        $this->middleware('permission:registrar_cargos')->only('store');
+        $this->middleware('permission:visualizar_cargos')->only('show');
+        $this->middleware('permission:editar_cargos')->only('update');
+        $this->middleware('permission:excluir_cargos')->only('destroy');
     }
     /**
      * Display a listing of the resource.
