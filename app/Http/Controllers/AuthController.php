@@ -2,47 +2,53 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
+use App\Http\Requests\LoginRequest;
+use Illuminate\Support\Facades\Auth;
+use App\Services\AuthService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
-    public function __construct()
+    protected AuthService $authService;
+
+    public function __construct(AuthService $authService)
     {
-        $this->middleware(['permission:visualizar_ponto'])->only('user');
+        $this->authService = $authService;
     }
-    public function login(Request $request)
+
+    public function login(LoginRequest $request)
     {
-        $credentials = $request->validate([
-            'email' => 'required|email',
-            'password' => 'required',
-        ]);
+        // Processa o login com o serviço
+        $userResource = $this->authService->authenticate($request->validated(), $request);
 
-        $user = User::where('email', $credentials['email'])->first();
-
-        if(!$user || !Hash::check($credentials['password'], $user->password)) {
-            return response()->json(['massage' => 'Login ou senha invalídos'], 401);
-        }
+        // Retorna resposta de sucesso com os dados do usuário
+        return response()->json($userResource, 200);
     }
 
     public function logout(Request $request)
     {
-        $request->user()->tokens()->delete();
+        Auth::guard('web')->logout();
+
+        $request->session()->invalidate();
+
+
         return response()->json(['message' => 'Logged out']);
     }
 
-    public function user(Request $request)
+    public function user()
     {
-        $user = $request->user();
+        $user = auth()->user();
 
         return response()->json([
             'id' => $user->id,
-            'name' => $user->name,
-            'roles' => $user->roles->pluck('name'),
+            'nome' => $user->name,
+            'funcao' => $user->roles[0]->name,
             'email' => $user->email,
-            'unidade_id' => $user->unidade_id,
-            'unidade' => $user->unidade->nome
+            'unidade' => $user->unidade ? [
+                'id' => $user->unidade->id,
+               'nome' => $user->unidade->nome,
+            ] : null,
         ]);
+
     }
 }

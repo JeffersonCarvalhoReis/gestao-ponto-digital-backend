@@ -13,9 +13,8 @@ class UserController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('permission:visualizar_usuarios')->only('index');
+        $this->middleware('permission:visualizar_usuarios')->only(['index', 'show']);
         $this->middleware('permission:registrar_usuarios')->only('store');
-        $this->middleware('permission:visualizar_usuarios')->only('show');
         $this->middleware('permission:editar_usuarios')->only('update');
         $this->middleware('permission:excluir_usuarios')->only('destroy');
     }
@@ -32,10 +31,24 @@ class UserController extends Controller
             $nome = $request->input('nome');
             $query->where('name', 'like', "%$nome%");
         }
-        $users = $query->get();
-        $users = UserResource::collection($users);
 
-        return response()->json($users, 200);
+        $perPage = $request->input('per_page', 10);
+        if($perPage == -1) {
+            $perPage = User::count();
+        }
+
+        $usersPaginado= $query->paginate($perPage);
+        $users = UserResource::collection($usersPaginado);
+
+        return response()->json([
+            'data' => $users,
+            'meta' => [
+                'current_page' => $usersPaginado->currentPage(),
+                'last_page' => $usersPaginado->lastPage(),
+                'per_page' => $usersPaginado->perPage(),
+                'total' => $usersPaginado->total(),
+            ],
+        ], 200);
     }
 
     /**

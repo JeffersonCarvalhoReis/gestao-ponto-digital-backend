@@ -18,7 +18,8 @@ class UnidadeResource extends JsonResource
             'id' => $this->id,
             'nome' => $this->nome,
             'localidade' => $this->localidade->nome,
-            'localidade_id' => $this->localidade_id
+            'localidade_id' => $this->localidade_id,
+            'cnes' => $this->cnes
 
         ];
     }

@@ -16,10 +16,13 @@ class UserResource extends JsonResource
     {
         return[
             'id' => $this->id,
-            'name' => $this->name,
+            'nome' => $this->name,
+            'funcao' => $this->roles[0]->name,
             'email' => $this->email,
-            'unidade' => $this->unidade->nome,
-            'roles' => $this->roles->pluck('name'),
+            'unidade' => $this->unidade ? [
+                'id' => $this->unidade->id,
+               'nome' => $this->unidade->nome,
+            ] : null,
         ];
     }
 }

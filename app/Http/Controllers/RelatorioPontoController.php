@@ -21,7 +21,7 @@ class RelatorioPontoController extends Controller
     public function __construct(DiaNaoUtilService $diaNaoUtilService)
     {
         $this->diaNaoUtilService = $diaNaoUtilService;
-        // $this->middleware('permission:gerar_relatorios')->only('gerarRelatorio');
+        $this->middleware('permission:gerar_relatorios')->only('gerarRelatorio');
 
     }
 
@@ -39,13 +39,13 @@ class RelatorioPontoController extends Controller
 
         $query = Funcionario::query();
 
-        // $user = auth()->user();
+        $user = auth()->user();
 
-        // if (!$user->hasAnyRole(['admin', 'super admin'])) {
-        //     $query->where('unidade_id', $user->unidade_id);
-        // }else {
+        if (!$user->hasAnyRole(['admin', 'super admin'])) {
+            $query->where('unidade_id', $user->unidade_id);
+        }else {
             $query->where('unidade_id', $unidadeId);
-        // }
+        }
 
         $funcionarios = $query->get();
 
@@ -53,7 +53,6 @@ class RelatorioPontoController extends Controller
         $inicioPeriodo = Carbon::create($ano, $mes, 1)->startOfWeek();
         $fimPeriodo = Carbon::create($ano, $mes)->endOfMonth()->endOfWeek();
         $diasDoMes = CarbonPeriod::create($inicioPeriodo, $fimPeriodo);
-
 
         $this->diaNaoUtilService->preencherFinaisDeSemana();
         $this->diaNaoUtilService->preencherFeriados();
@@ -66,7 +65,6 @@ class RelatorioPontoController extends Controller
         })->whereBetween('data', [$inicioPeriodo, $fimPeriodo])->get();
         $justificativas = Justificativa::whereBetween('data', [$inicioPeriodo, $fimPeriodo])->get();
         $registrosPonto = RegistroPonto::whereBetween('data_local', [$inicioPeriodo, $fimPeriodo])->get();
-
 
         $relatorioSemanas = [];
         $relatorioDias = [];
@@ -112,7 +110,8 @@ class RelatorioPontoController extends Controller
 
     }
 
-    function consolidarDadosDia($dia, $recessos, $funcionarioId, $diasNaoUteis, $ferias, $justificativas, $registrosPonto) {
+    function consolidarDadosDia($dia, $recessos, $funcionarioId, $diasNaoUteis, $ferias, $justificativas, $registrosPonto)
+     {
         $diaNaoUtil = $diasNaoUteis->firstWhere('data', $dia);
         $recesso = $recessos->firstWhere('data', $dia);
         $feriasFuncionario = $ferias->where('funcionario_id', $funcionarioId)->firstWhere('data', $dia);

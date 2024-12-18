@@ -15,9 +15,8 @@ class DiaNaoUtilController extends Controller
     {
         $this->service = $service;
 
-        $this->middleware('permission:visualizar_dias_nao_uteis')->only('index');
+        $this->middleware('permission:visualizar_dias_nao_uteis')->only(['index', 'show']);
         $this->middleware('permission:registrar_dias_nao_uteis')->only('store');
-        $this->middleware('permission:visualizar_dias_nao_uteis')->only('show');
         $this->middleware('permission:editar_dias_nao_uteis')->only('update');
         $this->middleware('permission:excluir_dias_nao_uteis')->only('destroy');
     }
@@ -35,15 +34,15 @@ class DiaNaoUtilController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'data_inicio' => 'required|date_format:d/m/Y',
-            'data_fim' => 'nullable|after_or_equal:data_inicio|date_format:d/m/Y',
+            'data_inicio' => 'required|date',
+            'data_fim' => 'nullable|after_or_equal:data_inicio|date',
             'tipo' => 'required|in:feriado,final_de_semana',
             'descricao' => 'nullable|string'
         ]);
 
 
-        $dataInicio = Carbon::createFromFormat('d/m/Y', $validated['data_inicio']);
-        $dataFim = isset($validated['data_fim']) ? Carbon::createFromFormat('d/m/Y', $validated['data_fim']) : $dataInicio;
+        $dataInicio = Carbon::create($validated['data_inicio']);
+        $dataFim = isset($validated['data_fim']) ? Carbon::create($validated['data_fim']) : $dataInicio;
 
 
         $datas = $dataInicio->daysUntil($dataFim)->map(function($data) use ($validated){
@@ -75,13 +74,13 @@ class DiaNaoUtilController extends Controller
         $diaNaoUtil = DiaNaoUtil::findOrFail($id);
 
         $validated = $request->validate([
-            'data' => 'sometimes||date_format:d/m/Y|unique:dias_nao_uteis,data,' . $diaNaoUtil->id,
+            'data' => 'sometimes|date|unique:dias_nao_uteis,data,' . $diaNaoUtil->id,
             'tipo' => 'sometimes|in:final_de_semana,feriado',
             'descricao' => 'nullable|string'
         ]);
 
         if (isset($validated['data'])) {
-            $validated['data'] = Carbon::createFromFormat('d/m/Y', $validated['data'])->format('Y-m-d');
+            $validated['data'] = Carbon::create($validated['data']);
         } else{
             $validated['data'] = $diaNaoUtil->data;
         }

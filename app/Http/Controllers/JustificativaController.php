@@ -49,10 +49,10 @@ class JustificativaController extends Controller
             'funcionario_id' => 'required|exists:funcionarios,id',
             'motivo' => 'required|string',
             'anexo' => 'nullable|file|mimes:jpg,jpeg,png,pdf,docx',
-            'data' => 'required|date_format:d/m/Y'
+            'data' => 'required|date'
         ]);
 
-        $validated['data'] = Carbon::createFromFormat('d/m/Y', $validated['data']);
+        $validated['data'] = Carbon::create( $validated['data']);
 
         if ($request->hasFile('anexo')) {
             $validated['anexo'] = $request->file('anexo')->store('justificativas', 'public');

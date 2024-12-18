@@ -34,14 +34,14 @@ class FeriaController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'data_inicio' => 'required|date_format:d/m/Y',
-            'data_fim' => 'nullable|after_or_equal:data_inicio|date_format:d/m/Y',
+            'data_inicio' => 'required|date',
+            'data_fim' => 'nullable|after_or_equal:data_inicio|date',
             'funcionario_id' => 'required|exists:funcionarios,id',
         ]);
 
 
-        $dataInicio = Carbon::createFromFormat('d/m/Y', $validated['data_inicio']);
-        $dataFim = isset($validated['data_fim']) ? Carbon::createFromFormat('d/m/Y', $validated['data_fim']) : $dataInicio;
+        $dataInicio = Carbon::create($validated['data_inicio']);
+        $dataFim = isset($validated['data_fim']) ? Carbon::create($validated['data_fim']) : $dataInicio;
 
 
         $datas = $dataInicio->daysUntil($dataFim)->map(function($data) use ($validated){
@@ -66,13 +66,13 @@ class FeriaController extends Controller
     public function destroy(Request $request)
     {
         $validated = $request->validate([
-            'data_inicio' => 'required|date_format:d/m/Y',
-            'data_fim' => 'required|after_or_equal:data_inicio|date_format:d/m/Y',
+            'data_inicio' => 'required|date',
+            'data_fim' => 'required|after_or_equal:data_inicio|date',
             'funcionario_id' => 'required|exists:funcionarios,id',
         ]);
 
-        $dataInicio = Carbon::createFromFormat('d/m/Y', $validated['data_inicio'])->toDateString();
-        $dataFim = Carbon::createFromFormat('d/m/Y', $validated['data_fim'])->toDateString();
+        $dataInicio = Carbon::create($validated['data_inicio'])->toDateString();
+        $dataFim = Carbon::create($validated['data_fim'])->toDateString();
 
         $totalApagado = Feria::where('funcionario_id', $validated['funcionario_id'])
             ->whereBetween('data', [$dataInicio, $dataFim])

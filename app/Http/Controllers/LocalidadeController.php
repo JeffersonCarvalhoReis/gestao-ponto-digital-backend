@@ -10,10 +10,9 @@ class LocalidadeController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('permission:visualizar_localidades')->only('index');
-        $this->middleware('permission:registrar_localidades')->only('store');
-        $this->middleware('permission:visualizar_localidades')->only('show');
-        $this->middleware('permission:editar_localidades')->only('update');
+        $this->middleware('permission:visualizar_localidades')->only(['index', 'show']);
+        $this->middleware('permission:criar_localidades')->only('store');
+        $this->middleware('permission:atualizar_localidades')->only('update');
         $this->middleware('permission:excluir_localidades')->only('destroy');
     }
     /**
@@ -22,13 +21,28 @@ class LocalidadeController extends Controller
     public function index(Request $request)
     {
         $query = Localidade::query();
-        if($request->has('nome')){
-            $localidades = $request->input('nome');
-            $query->where('nome','like', "%$localidades%");
+        $query->when($request->nome, function ($query, $nome){
+
+            $query->where('nome','like', "%$nome%");
+        });
+
+        $perPage = $request->input('per_page', 10);
+        if($perPage == -1) {
+            $perPage = Localidade::count();
         }
-        $localidades = $query->get();
-        $localidades = LocalidadeResource::collection($localidades);
-        return response()->json($localidades, 200);
+
+        $LocalidadesPaginada= $query->paginate($perPage);
+        $localidades = LocalidadeResource::collection($LocalidadesPaginada);
+
+        return response()->json([
+            'data' => $localidades,
+            'meta' => [
+                'current_page' => $LocalidadesPaginada->currentPage(),
+                'last_page' => $LocalidadesPaginada->lastPage(),
+                'per_page' => $LocalidadesPaginada->perPage(),
+                'total' => $LocalidadesPaginada->total(),
+            ],
+        ], 200);
 
     }
 

@@ -23,9 +23,10 @@ class FuncionarioResource extends JsonResource
             'carga_horaria' => $this->DadosContrato->carga_horaria ?? null,
             'data_admissao' => $this->DadosContrato->data_admissao ?? null,
             'salario_base' => $this->DadosContrato->salario_base ?? null,
+            'dados_contrato_id' => $this->DadosContrato->id ?? null,
             'foto' => $this->foto ? asset('storage/' . $this->foto) : null,
             'unidade' => $this->unidade->nome,
-            'cargo' => $this->cargo->nome,
+            'cargo' => $this->cargo?->nome,
             'unidade_id' => $this->unidade_id,
             'cargo_id' => $this->cargo_id,
         ];

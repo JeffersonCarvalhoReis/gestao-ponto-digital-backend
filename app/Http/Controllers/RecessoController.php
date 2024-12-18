@@ -10,9 +10,9 @@ class RecessoController extends Controller
 {
     public function __construct()
     {
-        // $this->middleware('permission:visualizar_recessos')->only('index');
-        // $this->middleware('permission:registrar_recessos')->only('store');
-        // $this->middleware('permission:excluir_recessos')->only('destroy');
+        $this->middleware('permission:visualizar_recessos')->only('index');
+        $this->middleware('permission:registrar_recessos')->only('store');
+        $this->middleware('permission:excluir_recessos')->only('destroy');
     }
 
 
@@ -21,16 +21,13 @@ class RecessoController extends Controller
      */
     public function index(Request $request)
     {
-        $validated = $request->validate([
-            'unidade' => 'nullable|exists:unidade,id'
-        ]);
 
         $query = Recesso::query();
 
-        if (isset($validated['unidade_id'])) {
+        $query->when($request->unidade_id, function ($query, $unidade_id) {
+            $query->where('unidade_id', $unidade_id);
 
-            $query->where('unidade_id', $validated['unidade_id']);
-        }
+        });
 
         $recesso = $query->get();
 
@@ -43,14 +40,14 @@ class RecessoController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'data_inicio' => 'required|date_format:d/m/Y',
-            'data_fim' => 'nullable|after_or_equal:data_inicio|date_format:d/m/Y',
+            'data_inicio' => 'required|date',
+            'data_fim' => 'nullable|after_or_equal:data_inicio|date',
             'unidade_id' => 'nullable|exists:unidades,id',
         ]);
 
 
-        $dataInicio = Carbon::createFromFormat('d/m/Y', $validated['data_inicio']);
-        $dataFim = isset($validated['data_fim']) ? Carbon::createFromFormat('d/m/Y', $validated['data_fim']) : $dataInicio;
+        $dataInicio = Carbon::create($validated['data_inicio']);
+        $dataFim = isset($validated['data_fim']) ? Carbon::create( $validated['data_fim']) : $dataInicio;
 
 
         $datas = $dataInicio->daysUntil($dataFim)->map(function($data) use ($validated){
@@ -76,13 +73,13 @@ class RecessoController extends Controller
     public function destroy(Request $request)
     {
         $validated = $request->validate([
-            'data_inicio' => 'required|date_format:d/m/Y',
-            'data_fim' => 'required|after_or_equal:data_inicio|date_format:d/m/Y',
+            'data_inicio' => 'required|date',
+            'data_fim' => 'required|after_or_equal:data_inicio|date',
             'unidade_id' => 'nullable|exists:unidades,id',
         ]);
 
-        $dataInicio = Carbon::createFromFormat('d/m/Y', $validated['data_inicio'])->toDateString();
-        $dataFim = Carbon::createFromFormat('d/m/Y', $validated['data_fim'])->toDateString();
+        $dataInicio = Carbon::create($validated['data_inicio'])->toDateString();
+        $dataFim = Carbon::create($validated['data_fim'])->toDateString();
 
         $query = Recesso::query();
 

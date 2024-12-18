@@ -10,9 +10,8 @@ class CargoController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('permission:visualizar_cargos')->only('index');
-        $this->middleware('permission:registrar_cargos')->only('store');
-        $this->middleware('permission:visualizar_cargos')->only('show');
+        $this->middleware('permission:visualizar_cargos')->only(['index', 'show']);
+        $this->middleware('permission:criar_cargos')->only('store');
         $this->middleware('permission:editar_cargos')->only('update');
         $this->middleware('permission:excluir_cargos')->only('destroy');
     }
@@ -22,14 +21,28 @@ class CargoController extends Controller
     public function index(Request $request)
     {
         $query = Cargo::query();
-        if($request->has('nome')){
-            $cargos = $request->input('nome');
-            $query->where('nome','like', "%$cargos%");
-        }
-        $cargos = $query->get();
-        $cargos = CargoResource::collection($cargos);
-        return response()->json($cargos, 200);
+        $query->when($request->nome, function ( $query, $nome ) {
+            $query->where('nome','like', "%$nome%");
+        });
 
+
+        $perPage = $request->input('per_page', 10);
+        if($perPage == -1) {
+            $perPage = Cargo::count();
+        }
+
+        $cargosPaginado= $query->paginate($perPage);
+        $cargos = CargoResource::collection($cargosPaginado);
+
+        return response()->json([
+            'data' => $cargos,
+            'meta' => [
+                'current_page' => $cargosPaginado->currentPage(),
+                'last_page' => $cargosPaginado->lastPage(),
+                'per_page' => $cargosPaginado->perPage(),
+                'total' => $cargosPaginado->total(),
+            ],
+        ], 200);
     }
 
     /**

@@ -50,6 +50,10 @@ class RolesSeeder extends Seeder
                'visualizar_unidades',
                'atualizar_unidades',
                'excluir_unidades',
+               'visualizar_localidades',
+               'criar_localidades',
+               'atualizar_localidades',
+               'excluir_localidades',
                'registrar_justificativas',
                'excluir_justificativas',
                'editar_justificativas',
@@ -79,12 +83,16 @@ class RolesSeeder extends Seeder
                 'registrar_ponto',
                 'visualizar_ponto',
                 'visualizar_ponto',
+                'registrar_funcionarios',
+                'editar_funcionarios',
                 'visualizar_funcionarios',
+                'excluir_funcionarios',
                 'registrar_justificativas',
                 'excluir_justificativas',
                 'editar_justificativas',
                 'visualizar_justificativas',
                 'gerar_relatorios',
+                'visualizar_cargos',
                 'registrar_biometria'
             ]);
         });

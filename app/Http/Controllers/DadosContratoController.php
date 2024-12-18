@@ -11,7 +11,7 @@ class DadosContratoController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('permission:registrar_dados-contratos')->only('store');
+        $this->middleware('permission:registrar_dados_contratos')->only('store');
         $this->middleware('permission:editar_dados_contratos')->only('update');
     }
      /**
@@ -20,7 +20,7 @@ class DadosContratoController extends Controller
     public function store(StoreDadosContratoRequest $request)
     {
         $data = $request->validated();
-        $data['data_admissao'] = Carbon::createFromFormat('d/m/Y', time: $data['data_admissao'])->format('Y-m-d');
+        $data['data_admissao'] = Carbon::create( $data['data_admissao']);
 
 
         DadosContrato::create($data);
@@ -36,12 +36,12 @@ class DadosContratoController extends Controller
      */
     public function update(UpdateDadosContratoRequest $request, string $id)
     {
-        $contrato = DadosContrato::findOrFail($id);
+        $contrato = DadosContrato::firstOrCreate(['id' => $id]);
 
         $data = $request->validated();
 
         if (isset($data['data_admissao'])) {
-            $data['data_admissao'] = Carbon::createFromFormat('d/m/Y', $data['data_admissao'])->format('Y-m-d');
+            $data['data_admissao'] = Carbon::create($data['data_admissao']);
         }
 
         $contrato->update($data);

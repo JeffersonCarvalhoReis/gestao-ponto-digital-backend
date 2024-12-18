@@ -12,10 +12,9 @@ class UnidadeController extends Controller
 
     public function __construct()
     {
-        $this->middleware('permission:visualizar_unidades')->only('index');
-        $this->middleware('permission:registrar_unidades')->only('store');
-        $this->middleware('permission:visualizar_unidades')->only('show');
-        $this->middleware('permission:editar_unidades')->only('update');
+        $this->middleware('permission:visualizar_unidades')->only(['index', 'show']);
+        $this->middleware('permission:criar_unidades')->only('store');
+        $this->middleware('permission:atualizar_unidades')->only('update');
         $this->middleware('permission:excluir_unidades')->only('destroy');
     }
     /**
@@ -24,14 +23,27 @@ class UnidadeController extends Controller
     public function index(Request $request)
     {
         $query = Unidade::query();
-        if($request->has('nome')){
-            $Unidades = $request->input('nome');
-            $query->where('nome','like', "%$Unidades%");
-        }
-        $Unidades = $query->get();
-        $Unidades = UnidadeResource::collection($Unidades);
-        return response()->json($Unidades, 200);
+        $query->when($request->nome, function ( $query, $nome ) {
+            $query->where('nome','like', "%$nome%");
+        });
 
+        $perPage = $request->input('per_page', 10);
+        if($perPage == -1) {
+            $perPage = Unidade::count();
+        }
+
+        $unidadesPaginada= $query->paginate($perPage);
+        $unidades = UnidadeResource::collection($unidadesPaginada);
+
+        return response()->json([
+            'data' => $unidades,
+            'meta' => [
+                'current_page' => $unidadesPaginada->currentPage(),
+                'last_page' => $unidadesPaginada->lastPage(),
+                'per_page' => $unidadesPaginada->perPage(),
+                'total' => $unidadesPaginada->total(),
+            ],
+        ], 200);
     }
 
     /**
@@ -71,7 +83,7 @@ class UnidadeController extends Controller
             $data = $request->validate([
                 'nome' => 'sometimes|min:2',
                 'localidade_id' => 'sometimes|numeric|exists:localidades,id',
-                'cnes' => 'sometimes|numeric|unique:unidades,cnes',
+                'cnes' => 'nullable|numeric|unique:unidades,cnes,'.$id,
             ]);
 
             $unidade->update($data);

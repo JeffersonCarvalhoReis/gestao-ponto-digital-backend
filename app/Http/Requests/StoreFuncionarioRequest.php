@@ -24,9 +24,9 @@ class StoreFuncionarioRequest extends FormRequest
     {
         return [
             'nome' => 'required|string|max:255',
-            'data_nascimento' => 'required|date_format:d/m/Y',
+            'data_nascimento' => 'required|date',
             'cpf' => ['required', 'string', 'max:14', 'unique:funcionarios,cpf', new ValidaCpf],
-            'foto' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'foto' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:10240',
             'unidade_id' => 'required|exists:unidades,id',
             'cargo_id' => 'required|exists:cargos,id',
         ];

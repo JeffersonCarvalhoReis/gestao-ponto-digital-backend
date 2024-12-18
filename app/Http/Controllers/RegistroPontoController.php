@@ -2,15 +2,43 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\BiometriaController;
+use App\Models\Funcionario;
 use App\Models\RegistroPonto;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class RegistroPontoController extends Controller
 {
-   public function registrarPonto(Request $request)
+
+    public function buscarFuncionarioBiometria() {
+        $biometria = new BiometriaController;
+
+        $resposta = $biometria->identificar();
+        $sucesso = $resposta->original['sucesso'];
+
+        if($sucesso) {
+            $funcionarioId = $resposta->original['funcionario'];
+            return $this->registrarPonto($funcionarioId, $sucesso );
+        } else {
+            return response()->json(['message' => 'Funcionário não encontrado'], 404);
+        }
+    }
+
+    public function buscarFuncionarioManualmente(string $funcionario) {
+
+        $funcionarioExiste = Funcionario::where('id', $funcionario)->first();
+
+        if($funcionarioExiste) {
+            return $this->registrarPonto($funcionario, false );
+        } else {
+            return response()->json(['message' => 'Funcionário não encontrado'], 404);
+        }
+    }
+
+   public function registrarPonto(string $funcionarioId, bool $biometria)
    {
-    $funcionarioId = $request->input('funcionario_id');
+
 
     $registroAberto = RegistroPonto::where('funcionario_id', $funcionarioId)
         ->whereNull('hora_saida')
@@ -31,7 +59,7 @@ class RegistroPontoController extends Controller
         $novoRegistro = RegistroPonto::create([
             'funcionario_id' => $funcionarioId,
             'hora_entrada' => Carbon::now(),
-            'biometrico' => (bool)$request->input('biometrico'),
+            'biometrico' => (bool)$biometria,
         ]);
 
         return response()->json([

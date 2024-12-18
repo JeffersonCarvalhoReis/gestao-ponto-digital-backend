@@ -12,11 +12,11 @@ class BiometriaController extends Controller
 
     public function __construct()
     {
-        $this->middleware('permission:registrar_biometria')->only('captureHash');
+        $this->middleware('permission:registrar_biometria')->only('capturarBiometria');
 
     }
 
-    public function captureHash(Funcionario $funcionario)
+    public function capturarBiometria(Funcionario $funcionario)
     {
         $response = Http::timeout(0)->get("{$this->apiUrl}capture-hash/");
 
@@ -31,8 +31,8 @@ class BiometriaController extends Controller
             ['template', 'updated_at']
         );
 
-            $this->deleteAll();
-            $this->loadToMemory();
+            $this->limparMemoria();
+            $this->carregar();
 
             return response()->json(['message' => 'Template capturado com sucesso!', 'data' => $template]);
         }
@@ -40,7 +40,7 @@ class BiometriaController extends Controller
         return response()->json($response->json(), 400);
     }
 
-    public function loadToMemory()
+    public function carregar()
     {
         $unidadeId = auth()->user()->unidade_id;
 
@@ -57,8 +57,10 @@ class BiometriaController extends Controller
             ? response()->json($response->json())
             : response()->json($response->json(), 400);
     }
-    public function identify()
+    public function identificar()
     {
+        $this->carregar();
+
         $response = Http::timeout(0)->get("{$this->apiUrl}identification/");
 
         $biometria = Biometria::find($response->json(('id')));
@@ -73,21 +75,21 @@ class BiometriaController extends Controller
             : response()->json(['message' => 'Biometria não encontrada', 'sucesso' => false], 404);
     }
 
-    public function destroy(string $id)
+    public function excluirBiometria(string $id)
     {
 
             $biometria = Biometria::findOrFail($id);
             $biometria->delete();
 
-            $this->deleteAll();
-            $this->loadToMemory();
+            $this->limparMemoria();
+            $this->carregar();
 
             return response()->json([
                 'message' => 'Biometria excluída com sucesso.'
             ], 200);
     }
 
-    public function deleteAll()
+    public function limparMemoria()
     {
         Http::get("{$this->apiUrl}delete-all-from-memory/");
 

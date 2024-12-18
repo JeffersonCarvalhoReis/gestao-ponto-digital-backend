@@ -22,9 +22,9 @@ class UpdateDadosContratoRequest extends FormRequest
     public function rules(): array
     {
         return [
-           'vinculo' => 'sometimes|string|max:50',
+            'vinculo' => 'sometimes|string|max:50',
             'carga_horaria' => 'sometimes|integer|min:1',
-            'data_admissao' => 'sometimes|date_format:d/m/Y',
+            'data_admissao' => 'sometimes|date',
             'salario_base' => 'sometimes|numeric|min:0',
         ];
     }
