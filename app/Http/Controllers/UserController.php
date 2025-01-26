@@ -3,11 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Http\Resources\UserResource;
+use App\Models\Unidade;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
+use Spatie\Permission\Models\Role;
 
 class UserController extends Controller
 {
@@ -23,7 +25,7 @@ class UserController extends Controller
      */
     public function index(Request $request)
     {
-        $query =  User::with('roles')
+        $query =  User::with(['roles', 'unidade'])
         ->with('unidade')
         ->whereDoesntHave('roles', fn ($query) => $query->where('name', 'super admin'));
 
@@ -36,6 +38,36 @@ class UserController extends Controller
         if($perPage == -1) {
             $perPage = User::count();
         }
+
+        $sortBy = $request->sortBy;
+        $query->when( $request->order, function ($query, $order) use ($sortBy) {
+            switch ($sortBy) {
+                case 'unidade.nome':
+                    $query->whereHas('unidade')
+                    ->orderBy(
+                    Unidade::select('nome')
+                            ->whereColumn('unidades.id', 'users.unidade_id'),
+                $order
+                    );
+                break;
+
+                case 'funcao':
+                    $query->addSelect([
+                            'role_name' => Role::select('name')
+                            ->join('model_has_roles', 'roles.id', '=', 'model_has_roles.role_id')
+                            ->whereColumn('model_has_roles.model_id', 'users.id')
+                            ->orderBy('roles.name', $order)
+                            ->limit(1)
+                    ])->orderBy('role_name', $order);
+                break;
+
+                default:
+
+                $query->orderBy($sortBy, $order);
+                break;
+            }
+
+        });
 
         $usersPaginado= $query->paginate($perPage);
         $users = UserResource::collection($usersPaginado);
@@ -65,6 +97,10 @@ class UserController extends Controller
 
         ]);
 
+
+        if (!$request->user()->can('store', [User::class, $request->funcao])) {
+            return response()->json(['message' => 'Não autorizado a criar este tipo de usuário.'], 403);
+        }
         $user = User::create([
             'name' => $request->nome,
             'email' => $request->email,

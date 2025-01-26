@@ -14,6 +14,13 @@ class UserPolicy
      * @param  \App\Models\User  $model
      * @return bool
      */
+    public function store(User $user, string $newUserRole): bool
+    {
+        if (!$user->hasRole('super admin') && $newUserRole === 'super admin') {
+            return false;
+        }
+        return true;
+    }
     public function update(User $user, User $model): bool
     {
         if($user->id === $model->id) {

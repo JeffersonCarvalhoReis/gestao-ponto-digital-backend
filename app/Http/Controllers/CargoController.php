@@ -31,6 +31,11 @@ class CargoController extends Controller
             $perPage = Cargo::count();
         }
 
+        $order = $request->order;
+        $query->when( $request->sortBy, function ($query, $sortBy) use ($order){
+            $query->orderBy($sortBy, $order);
+        });
+
         $cargosPaginado= $query->paginate($perPage);
         $cargos = CargoResource::collection($cargosPaginado);
 

@@ -30,6 +30,10 @@ class LocalidadeController extends Controller
         if($perPage == -1) {
             $perPage = Localidade::count();
         }
+        $order = $request->order;
+        $query->when( $request->sortBy, function ($query, $sortBy) use ($order){
+            $query->orderBy($sortBy, $order);
+        });
 
         $LocalidadesPaginada= $query->paginate($perPage);
         $localidades = LocalidadeResource::collection($LocalidadesPaginada);

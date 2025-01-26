@@ -5,7 +5,10 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreFuncionarioRequest;
 use App\Http\Requests\UpdateFuncionarioRequest;
 use App\Http\Resources\FuncionarioResource;
+use App\Models\Cargo;
+use App\Models\DadosContrato;
 use App\Models\Funcionario;
+use App\Models\Unidade;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -24,7 +27,7 @@ class FuncionarioController extends Controller
     }
     public function index(Request $request)
     {
-        $query = Funcionario::with('dadosContrato');
+        $query = Funcionario::with(['dadosContrato', 'unidade', 'cargo']);
 
         $user = auth()->user();
 
@@ -62,7 +65,43 @@ class FuncionarioController extends Controller
             $perPage = Funcionario::count();
         }
 
-        $funcionariosPaginado= $query->paginate($perPage);
+        $sortBy = $request->sortBy;
+        $query->when( $request->order, function ($query, $order) use ($sortBy) {
+            switch ($sortBy) {
+                case 'unidade':
+                    $query->whereHas('unidade')
+                    ->orderBy(
+                        Unidade::select('nome')
+                            ->whereColumn('unidades.id', 'funcionarios.unidade_id'),
+                        $order
+                    );
+                break;
+                case 'cargo':
+                    $query->whereHas('cargo')
+                    ->orderBy(
+                        Cargo::select('nome')
+                            ->whereColumn('cargos.id', 'funcionarios.cargo_id'),
+                        $order
+                    );
+                break;
+
+                case 'vinculo':
+                    $query->whereHas('dadosContrato')
+                    ->orderBy(
+                        DadosContrato::select('vinculo')
+                            ->whereColumn('dados_contratos.funcionario_id', 'funcionarios.id'),
+                        $order
+                    );
+                break;
+
+                default:
+
+                $query->orderBy($sortBy, $order);
+                break;
+            }
+
+        });
+        $funcionariosPaginado= $query->paginate($perPage );
         $funcionarios = FuncionarioResource::collection($funcionariosPaginado);
 
         return response()->json([

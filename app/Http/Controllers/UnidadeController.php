@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Resources\UnidadeResource;
+use App\Models\Localidade;
 use App\Models\Unidade;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
@@ -22,7 +23,8 @@ class UnidadeController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Unidade::query();
+        $query = Unidade::query()->with('localidade');
+
         $query->when($request->nome, function ( $query, $nome ) {
             $query->where('nome','like', "%$nome%");
         });
@@ -31,6 +33,21 @@ class UnidadeController extends Controller
         if($perPage == -1) {
             $perPage = Unidade::count();
         }
+
+        $sortBy = $request->sortBy;
+        $query->when( $request->order, function ($query, $order) use ($sortBy) {
+            if ($sortBy === 'localidade') {
+                $query->whereHas('localidade')
+                    ->orderBy(
+                        Localidade::select('nome')
+                            ->whereColumn('localidades.id', 'unidades.localidade_id'),
+                        $order
+                    );
+                }
+                else {
+                    $query->orderBy($sortBy, $order);
+                }
+        });
 
         $unidadesPaginada= $query->paginate($perPage);
         $unidades = UnidadeResource::collection($unidadesPaginada);
