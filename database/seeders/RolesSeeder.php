@@ -65,7 +65,7 @@ class RolesSeeder extends Seeder
                'registrar_recessos',
                'excluir_recessos',
                'visualizar_recessos',
-               'criar_dias_nao_uteis',
+               'registrar_dias_nao_uteis',
                'visualizar_dias_nao_uteis',
                'atualizar_dias_nao_uteis',
                'excluir_dias_nao_uteis',

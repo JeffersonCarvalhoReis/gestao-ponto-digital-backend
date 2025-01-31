@@ -49,14 +49,14 @@ Route::middleware(['auth:sanctum'])->group(function(){
     Route::put('dados-contratos/{id}', [DadosContratoController::class, 'update']);
 
     // Dias sem expediente
-    Route::apiResource('/dia-nao-util',  DiaNaoUtilController::class);
     Route::post('ferias', [FeriaController::class, 'store']);
     Route::get('ferias', [FeriaController::class, 'index']);
     Route::delete('ferias', [FeriaController::class, 'destroy']);
     Route::post('recesso', [RecessoController::class, 'store']);
-    Route::get('recesso', [RecessoController::class, 'index']);
     Route::delete('recesso', [RecessoController::class, 'destroy']);
+    Route::apiResource('/dia-nao-util',  DiaNaoUtilController::class);
 });
+Route::get('recesso', [RecessoController::class, 'index']);
 
 
 

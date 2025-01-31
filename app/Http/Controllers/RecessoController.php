@@ -2,17 +2,19 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\RecessoResource;
 use App\Models\Recesso;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class RecessoController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('permission:visualizar_recessos')->only('index');
-        $this->middleware('permission:registrar_recessos')->only('store');
-        $this->middleware('permission:excluir_recessos')->only('destroy');
+        // $this->middleware('permission:visualizar_recessos')->only('index');
+        // $this->middleware('permission:registrar_recessos')->only('store');
+        // $this->middleware('permission:excluir_recessos')->only('destroy');
     }
 
 
@@ -22,7 +24,7 @@ class RecessoController extends Controller
     public function index(Request $request)
     {
 
-        $query = Recesso::query();
+        $query = Recesso::with('unidade');
 
         $query->when($request->unidade_id, function ($query, $unidade_id) {
             $query->where('unidade_id', $unidade_id);
@@ -30,6 +32,7 @@ class RecessoController extends Controller
         });
 
         $recesso = $query->get();
+        $recesso =  RecessoResource::collection($recesso);
 
         return response()->json($recesso, 200, );
     }
@@ -45,7 +48,6 @@ class RecessoController extends Controller
             'unidade_id' => 'nullable|exists:unidades,id',
         ]);
 
-
         $dataInicio = Carbon::create($validated['data_inicio']);
         $dataFim = isset($validated['data_fim']) ? Carbon::create( $validated['data_fim']) : $dataInicio;
 
@@ -54,6 +56,8 @@ class RecessoController extends Controller
             return [
                 'data' => $data->toDateString(),
                 'unidade_id' => $validated['unidade_id'] ?? null,
+                'tipo' => 'recesso',
+                'descricao' => 'Recesso',
                 'created_at' => now(),
                 'updated_at' => now(),
             ];
@@ -72,9 +76,10 @@ class RecessoController extends Controller
      */
     public function destroy(Request $request)
     {
+
         $validated = $request->validate([
-            'data_inicio' => 'required|date',
-            'data_fim' => 'required|after_or_equal:data_inicio|date',
+            'data_inicio' => 'nullable|date',
+            'data_fim' => 'nullable|after_or_equal:data_inicio|date',
             'unidade_id' => 'nullable|exists:unidades,id',
         ]);
 
@@ -86,9 +91,8 @@ class RecessoController extends Controller
         if (isset($validated['unidade_id'])) {
 
             $query->where('unidade_id' , $validated['unidade_id']);
-        } else {
-            $query->whereNull('unidade_id');
         }
+
         $totalApagado = $query->whereBetween('data', [$dataInicio, $dataFim])
                   ->delete();
 

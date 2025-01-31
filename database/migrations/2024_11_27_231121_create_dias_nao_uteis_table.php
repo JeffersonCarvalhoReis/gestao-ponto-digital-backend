@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('dias_nao_uteis', function (Blueprint $table) {
             $table->id();
-            $table->date('data')->unique();
+            $table->date('data');
             $table->enum('tipo', ['final_de_semana', 'feriado']);
             $table->string('descricao')->nullable();
             $table->timestamps();

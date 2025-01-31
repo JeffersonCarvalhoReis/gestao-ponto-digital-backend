@@ -8,6 +8,8 @@ class Feria extends Model
 {
     protected $fillable = [
         'data',
+        'tipo',
+        'descricao',
         'funcionario_id'
     ];
 

@@ -8,6 +8,8 @@ class Recesso extends Model
 {
     protected $fillable = [
         'data',
+        'tipo',
+        'descricao',
         'unidade_id'
     ];
 

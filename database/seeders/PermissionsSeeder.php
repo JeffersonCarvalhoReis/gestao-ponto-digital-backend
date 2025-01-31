@@ -55,7 +55,7 @@ class PermissionsSeeder extends Seeder
             'excluir',
         ],
         'dias_nao_uteis' => [
-            'criar',
+            'registrar',
             'atualizar',
             'visualizar',
             'excluir',

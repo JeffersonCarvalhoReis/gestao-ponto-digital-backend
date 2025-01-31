@@ -25,8 +25,27 @@ class DiaNaoUtilController extends Controller
      */
     public function index()
     {
+        $anoAtual = Carbon::now()->year;
+
+        $feriadosExistentes = DiaNaoUtil::where('tipo', 'feriado')
+            ->whereYear('created_at', $anoAtual)
+            ->exists();
+
+        if (!$feriadosExistentes) {
+            $this->preencherFeriados();
+        }
+
+        $finaisDeSemanaExistentes = DiaNaoUtil::where('tipo', 'final_de_semana')
+            ->whereYear('created_at', $anoAtual)
+            ->exists();
+
+        if (!$finaisDeSemanaExistentes) {
+            $this->preencherFinaisDeSemana();
+        }
+
         return DiaNaoUtil::all();
     }
+
 
     /**
      * Store a newly created resource in storage.

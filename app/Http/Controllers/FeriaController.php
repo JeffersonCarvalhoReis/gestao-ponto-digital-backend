@@ -48,6 +48,8 @@ class FeriaController extends Controller
             return [
                 'data' => $data->toDateString(),
                 'funcionario_id' => $validated['funcionario_id'] ?? null,
+                'tipo' => 'ferias',
+                'descricao' => 'ferias',
                 'created_at' => now(),
                 'updated_at' => now(),
             ];

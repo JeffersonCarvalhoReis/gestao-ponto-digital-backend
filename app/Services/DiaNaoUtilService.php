@@ -10,7 +10,7 @@ class DiaNaoUtilService
 {
     public function preencherFinaisDeSemana()
     {
-        $periodo = Carbon::now()->startOfMonth()->startOfWeek()->daysUntil(Carbon::now()->endOfMonth()->endOfWeek());
+        $periodo = Carbon::now()->startOfYear()->startOfWeek()->daysUntil(Carbon::now()->endOfYear()->endOfWeek());
 
         $finaisDeSemana = collect($periodo)->filter(function ($data) {
             return $data->isWeekend();
@@ -24,11 +24,13 @@ class DiaNaoUtilService
             ];
         });
 
-        DiaNaoUtil::upsert(
-            $finaisDeSemana->toArray(),
-            ['data'],
-            ['tipo', 'descricao', 'updated_at']
-        );
+        foreach ($finaisDeSemana as $finalDeSemana) {
+            DiaNaoUtil::updateOrCreate(
+                ['data' => $finalDeSemana['data'],'tipo' => $finalDeSemana['tipo'],
+            ],
+                $finalDeSemana
+            );
+        }
     }
 
     public function preencherFeriados()
@@ -47,9 +49,9 @@ class DiaNaoUtilService
             DiaNaoUtil::updateOrCreate(
                 [
                     'data' => $feriado['date'],
+                    'tipo' => 'feriado',
                 ],
                 [
-                    'tipo' => 'feriado',
                     'descricao' => $feriado['name'],
                     'created_at' => now(),
                     'updated_at' => now()

@@ -101,7 +101,7 @@ class FuncionarioController extends Controller
             }
 
         });
-        $funcionariosPaginado= $query->paginate($perPage );
+        $funcionariosPaginado = $query->paginate($perPage );
         $funcionarios = FuncionarioResource::collection($funcionariosPaginado);
 
         return response()->json([

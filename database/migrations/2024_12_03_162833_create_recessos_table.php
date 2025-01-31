@@ -14,6 +14,8 @@ return new class extends Migration
         Schema::create('recessos', function (Blueprint $table) {
             $table->id();
             $table->date('data');
+            $table->string('tipo');
+            $table->string('descricao')->nullable();
             $table->foreignId('unidade_id')->nullable()->constrained()->cascadeOnDelete();
             $table->timestamps();
         });
