@@ -1,4 +1,4 @@
-# Sistema de API Laravel
+# Sistema de gerenciamento de ponto digital API Laravel
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo">
@@ -9,7 +9,7 @@
 Este sistema é uma API desenvolvida em Laravel que permite:
 
 - Controle de ponto por meio de biometria utilizando o leitor Fingertech Hamster DX USB.
-- - Sistema de login com controle de roles e permissions.
+- Sistema de login com controle de roles e permissions.
 - CRUD de localidade, unidade e funcionários.
 - Geração de relatórios de presença dos funcionários.
 - Inserção de dias não úteis.
@@ -94,12 +94,39 @@ Certifique-se de ter os seguintes requisitos instalados:
 
 ### Endpoints Principais
 
-- **Localidades:** `/api/localidades`
-- **Unidades:** `/api/unidades`
-- **Funcionários:** `/api/funcionarios`
-- **Autenticação:** `/api/auth/login`
-- **Relatórios:** `/api/relatorios/presenca`
+- **Login:** `POST /login`
+- **Logout:** `POST /logout`
+- **Dados do Usuário:** `GET /user`
 
+#### Biometria
+- **Registrar Biometria:** `POST /biometria/registrar/{funcionario}`
+- **Excluir Biometria:** `DELETE /biometria/excluir/{id}`
+
+#### Registro de Ponto
+- **Buscar Funcionario por Biometria:** `POST /registro-ponto/biometria`
+- **Registro Manual de Ponto:** `POST /registro-ponto/manual/{funcionario}`
+
+#### Relatório de Pontos
+- **Gerar Relatório:** `POST /relatorio`
+
+#### Recursos CRUD
+- **Usuários:** `apiResource /usuarios`
+- **Localidades:** `apiResource /localidades`
+- **Cargos:** `apiResource /cargos`
+- **Unidades:** `apiResource /unidades`
+- **Justificativas:** `apiResource /justificativas`
+
+#### Dados dos Funcionários
+- **Funcionários:** `apiResource /funcionarios`
+- **Verificar CPF:** `GET /funcionarios/verificar-cpf/{cpf}`
+- **Apagar Foto:** `DELETE /funcionarios/apagar-foto/{id}`
+- **Inserir Dados de Contrato:** `POST /dados-contratos`
+- **Atualizar Dados de Contrato:** `PUT /dados-contratos/{id}`
+
+#### Dias sem Expediente
+- **Dias Não Úteis:** `apiResource /dia-nao-util`
+- **Férias:** `POST /ferias`, `GET /ferias`, `DELETE /ferias`
+- **Recesso:** `POST /recesso`, `GET /recesso`, `DELETE /recesso`
 
 ## Licença
 
