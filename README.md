@@ -28,8 +28,8 @@ Certifique-se de ter os seguintes requisitos instalados:
 1. Clone o repositório:
 
    ```bash
-   git clone https://github.com/seu-usuario/seu-repositorio.git
-   cd seu-repositorio
+   git clone https://github.com/JeffersonCarvalhoReis/gestao-ponto-digital-backend.git
+   cd gestao-ponto-digital-backend
    ```
 
 2. Instale as dependências do projeto:
