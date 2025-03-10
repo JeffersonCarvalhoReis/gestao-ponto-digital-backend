@@ -1,66 +1,134 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Sistema de gerenciamento de ponto digital API Laravel
 
 <p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
+  <img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo">
 </p>
 
-## About Laravel
+## Descrição
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+Este sistema é uma API desenvolvida em Laravel que permite:
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+- Controle de ponto por meio de biometria utilizando o leitor Fingertech Hamster DX USB.
+- Sistema de login com controle de roles e permissions.
+- CRUD de localidade, unidade e funcionários.
+- Geração de relatórios de presença dos funcionários.
+- Inserção de dias não úteis.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## Requisitos
 
-## Learning Laravel
+Certifique-se de ter os seguintes requisitos instalados:
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+- PHP >= 8.0
+- Composer
+- Banco de dados (MySQL, PostgreSQL, ou outro suportado pelo Laravel)
+- Leitor Biométrico Fingertech Hamster DX USB e seu driver
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+## Instalação
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+1. Clone o repositório:
 
-## Laravel Sponsors
+   ```bash
+   git clone https://github.com/JeffersonCarvalhoReis/gestao-ponto-digital-backend.git
+   cd gestao-ponto-digital-backend
+   ```
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+2. Instale as dependências do projeto:
 
-### Premium Partners
+   ```bash
+   composer install
+   ```
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+3. Copie o arquivo `.env.example` para `.env`:
 
-## Contributing
+   ```bash
+   cp .env.example .env
+   ```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+4. Configure o arquivo `.env` com os dados do seu banco de dados e outras configurações necessárias.
 
-## Code of Conduct
+5. Gere a chave da aplicação:
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+   ```bash
+   php artisan key:generate
+   ```
 
-## Security Vulnerabilities
+6. Execute as migrações e seeders:
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+   ```bash
+   php artisan migrate --seed
+   ```
 
-## License
+7. Inicie o servidor de desenvolvimento:
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+   ```bash
+   php artisan serve
+   ```
+
+## Funcionalidades
+
+### CRUD
+
+- **Localidades:** Cadastro, listagem, atualização e exclusão.
+- **Unidades:** Gerenciamento completo das unidades.
+- **Funcionários:** Controle total dos dados dos funcionários.
+
+### Sistema de Login com Roles e Permissions
+
+- Gerenciamento de permissões para diferentes usuários.
+- Controle seguro de acesso baseado em funções.
+
+### Controle de Ponto com Biometria
+
+- Integração com o leitor biométrico Fingertech Hamster DX USB.
+- Registro preciso da presença dos funcionários.
+
+### Relatórios de Presença
+
+- Geração de relatórios detalhados de presença dos funcionários.
+
+### Dias Não Úteis
+
+- Inserção e gerenciamento de feriados e datas não úteis.
+
+## Uso
+
+### Endpoints Principais
+
+- **Login:** `POST /login`
+- **Logout:** `POST /logout`
+- **Dados do Usuário:** `GET /user`
+
+#### Biometria
+- **Registrar Biometria:** `POST /biometria/registrar/{funcionario}`
+- **Excluir Biometria:** `DELETE /biometria/excluir/{id}`
+
+#### Registro de Ponto
+- **Buscar Funcionario por Biometria:** `POST /registro-ponto/biometria`
+- **Registro Manual de Ponto:** `POST /registro-ponto/manual/{funcionario}`
+
+#### Relatório de Pontos
+- **Gerar Relatório:** `POST /relatorio`
+
+#### Recursos CRUD
+- **Usuários:** `apiResource /usuarios`
+- **Localidades:** `apiResource /localidades`
+- **Cargos:** `apiResource /cargos`
+- **Unidades:** `apiResource /unidades`
+- **Justificativas:** `apiResource /justificativas`
+
+#### Dados dos Funcionários
+- **Funcionários:** `apiResource /funcionarios`
+- **Verificar CPF:** `GET /funcionarios/verificar-cpf/{cpf}`
+- **Apagar Foto:** `DELETE /funcionarios/apagar-foto/{id}`
+- **Inserir Dados de Contrato:** `POST /dados-contratos`
+- **Atualizar Dados de Contrato:** `PUT /dados-contratos/{id}`
+
+#### Dias sem Expediente
+- **Dias Não Úteis:** `apiResource /dia-nao-util`
+- **Férias:** `POST /ferias`, `GET /ferias`, `DELETE /ferias`
+- **Recesso:** `POST /recesso`, `GET /recesso`, `DELETE /recesso`
+
+## Licença
+
+Este projeto está licenciado sob a [Licença MIT](https://opensource.org/licenses/MIT).
+
