@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\DiaNaoUtil;
+use App\Models\Recesso;
 use App\Services\DiaNaoUtilService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -147,5 +148,34 @@ class DiaNaoUtilController extends Controller
         } catch (\Exception $e) {
             return response()->json(['message' => $e->getMessage()], 500);
         }
+    }
+    public function proximosFeriados() {
+
+        $hoje = Carbon::now()->format('Y-m-d');
+        $proximosDias = Carbon::now()->addDays(30)->format('Y-m-d');
+
+        $query = Recesso::query();
+
+        $user = auth()->user();
+
+        if (!$user->hasAnyRole(['admin', 'super admin'])) {
+            $query->where('unidade_id', $user->unidade_id)->orWhere('unidade_id', null);
+        }
+
+        $feriados = DiaNaoUtil::where('tipo', 'feriado')->whereBetween('data', [$hoje, $proximosDias])
+        ->get(['data', 'descricao', 'tipo']);
+
+        $recessos = $query->where(function ($query) use ($hoje, $proximosDias) {
+            $query->whereBetween('data_inicio', [$hoje, $proximosDias])
+                  ->orWhereBetween('data_fim', [$hoje, $proximosDias]);
+        })
+        ->distinct()
+        ->get(['data_inicio', 'data_fim', 'descricao', 'tipo']);
+
+        $feriadosRecessos = [...$recessos, ...$feriados];
+
+        return response()->json([
+            'proximos_feriados' => $feriadosRecessos,
+        ], 200);
     }
 }

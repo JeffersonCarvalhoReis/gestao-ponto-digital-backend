@@ -146,7 +146,7 @@ class RelatorioPontoController extends Controller
         } elseif ($diaNaoUtil) {
             $status = 'Dia Não Útil';
         } elseif ($feriasFuncionario) {
-            $status = 'Férias';
+            $status = $feriasFuncionario->descricao;
         } elseif($recesso) {
             $status = 'Recesso';
         } elseif ($dia > Carbon::today()->toDateString()) {

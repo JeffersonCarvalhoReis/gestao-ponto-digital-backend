@@ -10,7 +10,10 @@ class Feria extends Model
         'data',
         'tipo',
         'descricao',
-        'funcionario_id'
+        'funcionario_id',
+        'data_inicio',
+        'data_fim'
+
     ];
 
     public function funcionario()

@@ -42,6 +42,7 @@ class JustificativaController extends Controller
         $user = auth()->user();
 
         $funcionario = Funcionario::findOrFail($request->funcionario_id);
+
         if (!$user->hasAnyRole(['admin', 'super admin']) && $funcionario->unidade_id !== $user->unidade_id) {
             return response()->json(['message' => 'Acesso não autorizado'], 403);
         }
@@ -49,20 +50,36 @@ class JustificativaController extends Controller
             'funcionario_id' => 'required|exists:funcionarios,id',
             'motivo' => 'required|string',
             'anexo' => 'nullable|file|mimes:jpg,jpeg,png,pdf,docx',
-            'data' => 'required|date'
+            'data_inicio' => 'required|date',
+            'data_fim' => 'nullable|after_or_equal:data_inicio|date',
         ]);
-
-        $validated['data'] = Carbon::create( $validated['data']);
 
         if ($request->hasFile('anexo')) {
             $validated['anexo'] = $request->file('anexo')->store('justificativas', 'public');
         }
 
-        $justificativa = Justificativa::create($validated);
+        $dataInicio = Carbon::create($validated['data_inicio']);
+        $dataFim = isset($validated['data_fim']) ? Carbon::create( $validated['data_fim']) : $dataInicio;
+
+
+        $datas = $dataInicio->daysUntil($dataFim)->map(function($data) use ($validated, $dataInicio, $dataFim){
+            return [
+                'data' => $data->toDateString(),
+                'funcionario_id' => $validated['funcionario_id'],
+                'data_inicio' => $dataInicio,
+                'data_fim' => $dataFim,
+                'motivo' => $validated['motivo'],
+                'anexo' => $validated['anexo'],
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+        });
+
+        Justificativa::insert(collect($datas)->toArray() );
+
 
         return response()->json([
             'message' => 'Justificativa criada com sucesso',
-            'justificativa' => $justificativa
         ], 201);
     }
 

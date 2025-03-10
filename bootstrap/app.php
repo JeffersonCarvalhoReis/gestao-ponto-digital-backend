@@ -1,9 +1,13 @@
 <?php
 
+use App\Exceptions\BiometricException;
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Session\TokenMismatchException;
 use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 use Spatie\Permission\Middleware\RoleMiddleware;
@@ -39,19 +43,48 @@ return Application::configure(basePath: dirname(__DIR__))
             if($e->getPrevious() instanceof ModelNotFoundException){
 
                 return response()->json([
-                    'error' => 'O recurso solicitado não foi encontrado.'
+                    'message' => 'O recurso solicitado não foi encontrado.'
                 ], 404);
             }
         });
-        // $exceptions->render(function (ValidationException $e) {
-        //     return response()->json([
-        //         'message' => 'Erro de validação.',
-        //         'errors' => $e->errors(),
-        //     ], 422);
-        // });
+        $exceptions->render(function (Throwable $e) {
 
-        // $exceptions->render(function (Throwable $e) {
-        //     \Log::error($e);
-        //     return response()->json(['message' => 'Erro interno do servidor.'], 500);
-        // });
+            if ($e instanceof AuthenticationException) {
+                return response()->json([
+                    'message' => 'Sua sessão expirou. Por favor, faça login novamente para continuar'
+            ], 401);
+            }
+
+        });
+
+        $exceptions->render(function (Throwable $e) {
+
+            if ($e instanceof TokenMismatchException) {
+                return response()->json([
+                    'message' => 'Sua sessão expirou. Atualize a página e tente novamente.'
+                ], 419);
+            }
+
+        });
+
+        $exceptions->render(function (Throwable $e) {
+
+            if ($e instanceof BiometricException) {
+                return response()->json([
+                    'message' => 'Falha ao se contectar com o aparelho biometrico.'
+                ], 500);
+            }
+
+        });
+        $exceptions->render(function (Throwable $e) {
+            if ($e instanceof QueryException) {
+                // Verifica se o erro é de restrição de chave estrangeira
+                if (str_contains($e->getMessage(), 'Integrity constraint violation')) {
+                    return response()->json([
+                        'message' => 'Este registro não pode ser excluído porque está relacionado a outros dados.'
+                    ], 400);
+                }
+            }
+
+        });
     })->create();

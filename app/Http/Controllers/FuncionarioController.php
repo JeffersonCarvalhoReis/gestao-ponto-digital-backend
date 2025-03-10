@@ -9,6 +9,7 @@ use App\Models\Cargo;
 use App\Models\DadosContrato;
 use App\Models\Funcionario;
 use App\Models\Unidade;
+use App\Models\Biometria;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -27,7 +28,7 @@ class FuncionarioController extends Controller
     }
     public function index(Request $request)
     {
-        $query = Funcionario::with(['dadosContrato', 'unidade', 'cargo']);
+        $query = Funcionario::with(['dadosContrato', 'unidade', 'cargo', 'biometria']);
 
         $user = auth()->user();
 
@@ -58,6 +59,13 @@ class FuncionarioController extends Controller
                 $q->where('id',  $cargo);
             });
 
+        });
+        $query->when($request->biometria, function ($query, $biometria) {
+            if ($biometria === 'Pendente') {
+                $query->whereDoesntHave('biometria'); // Filtra funcionários SEM biometria
+            } elseif ($biometria === 'Cadastrado') {
+                $query->whereHas('biometria'); // Filtra funcionários COM biometria
+            }
         });
 
         $perPage = $request->input('per_page', 10);
@@ -92,6 +100,12 @@ class FuncionarioController extends Controller
                             ->whereColumn('dados_contratos.funcionario_id', 'funcionarios.id'),
                         $order
                     );
+                break;
+                case 'biometria':
+                    $query->selectRaw(
+                        '*, (SELECT COUNT(*) FROM biometrias WHERE biometrias.funcionario_id = funcionarios.id) as has_biometria'
+                    )->orderBy('has_biometria', $order);
+
                 break;
 
                 default:

@@ -89,7 +89,7 @@ class UserController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'nome' => 'required|string|max:255',
+            'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users',
             'senha' => 'required|string|min:8',
             'funcao' => 'required|exists:roles,name',
@@ -102,7 +102,7 @@ class UserController extends Controller
             return response()->json(['message' => 'Não autorizado a criar este tipo de usuário.'], 403);
         }
         $user = User::create([
-            'name' => $request->nome,
+            'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->input('senha')),
             'unidade_id' => (int)$request->input('unidade'),
@@ -139,7 +139,7 @@ class UserController extends Controller
         Gate::authorize('update', $userToUpdate);
 
         $request->validate([
-            'nome' => 'sometimes|string|max:255',
+            'name' => 'sometimes|string|max:255',
             'email' => 'sometimes|email|unique:users,email,' . $userToUpdate->id,
             'senha' => 'sometimes|string|min:8',
             'funcao' => 'sometimes|exists:roles,name',
@@ -147,7 +147,7 @@ class UserController extends Controller
         ]);
 
         $data = [
-            'name' => $request->nome,
+            'name' => $request->name,
             'email' => $request->email,
             'unidade_id' => $request->unidade,
         ];

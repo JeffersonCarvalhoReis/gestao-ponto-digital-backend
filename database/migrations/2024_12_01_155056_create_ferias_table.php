@@ -14,6 +14,8 @@ return new class extends Migration
         Schema::create('ferias', function (Blueprint $table) {
             $table->id();
             $table->date('data');
+            $table->date('data_inicio');
+            $table->date('data_fim');
             $table->string('tipo');
             $table->string('descricao')->nullable();
             $table->foreignId('funcionario_id')->constrained()->cascadeOnDelete();

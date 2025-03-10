@@ -3,10 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\BiometriaController;
+use App\Http\Resources\RegistroPontoResource;
 use App\Models\Funcionario;
 use App\Models\RegistroPonto;
 use Carbon\Carbon;
-use Illuminate\Http\Request;
 
 class RegistroPontoController extends Controller
 {
@@ -67,5 +67,24 @@ class RegistroPontoController extends Controller
             'registro' => $novoRegistro,
             'criado ' => $novoRegistro->created_at->timezone('America/Sao_Paulo')->format('Y-m-d H:i:s'),
         ], 200);
+   }
+   public function registroDoDia() {
+
+    $user = auth()->user();
+    $query = RegistroPonto::with('funcionario')->whereDate('data_local', Carbon::today());
+
+
+    if (!$user->hasAnyRole(['admin', 'super admin'])) {
+        $query->whereHas('funcionario', function ($q) use ($user) {
+            $q->where('unidade_id', $user->unidade_id);
+        });
+    }
+
+    $registros = $query->orderBy('updated_at', 'desc')->get();
+    $registros = RegistroPontoResource::collection($registros);
+
+     return response()->json( [
+        'registros_do_dia' => $registros,
+     ], 200);
    }
 }

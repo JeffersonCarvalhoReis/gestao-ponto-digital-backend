@@ -33,7 +33,7 @@ class RegistroPonto extends Model
     {
         return $this->belongsTo(Funcionario::class);
     }
-    public function relatorioPotnos()
+    public function relatorioPontos()
     {
         return $this->belongsTo(RelatorioPonto::class);
     }

@@ -150,4 +150,9 @@ return [
     'uppercase'            => 'O :attribute deve ser maiúsculo.',
     'url'                  => 'O formato da URL informada para o campo :attribute é inválido.',
     'uuid'                 => 'O campo :attribute deve ser um UUID válido.',
+    'attributes' => [
+        'funcionario_id' => 'funcionário',
+        'data_fim' => 'data final',
+        'data_inicio' => 'data de início'
+    ],
 ];

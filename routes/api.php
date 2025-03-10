@@ -28,10 +28,12 @@ Route::middleware(['auth:sanctum'])->group(function(){
     // Registro de Ponto
     Route::post('registro-ponto/biometria', [RegistroPontoController::class, 'buscarFuncionarioBiometria']);
     Route::post('registro-ponto/manual/{funcionario}', [RegistroPontoController::class, 'buscarFuncionarioManualmente']);
+    Route::get('/registros-do-dia', [RegistroPontoController::class, 'registroDoDia']);
 
     Route::post('/logout', [AuthController::class, 'logout']);
 
     // Relatório de Pontos
+    //ainda falta implemnetar
     Route::post('relatorio', [RelatorioPontoController::class, 'gerarRelatorio']);
 
     //Recuros
@@ -39,6 +41,7 @@ Route::middleware(['auth:sanctum'])->group(function(){
     Route::apiResource('/localidades',   LocalidadeController::class);
     Route::apiResource('/cargos',  CargoController::class);
     Route::apiResource('/unidades',  UnidadeController::class);
+    //ainda falta implmentar
     Route::apiResource('/justificativas',  JustificativaController::class);
 
     // Dados dos funcionarios
@@ -53,10 +56,12 @@ Route::middleware(['auth:sanctum'])->group(function(){
     Route::get('ferias', [FeriaController::class, 'index']);
     Route::delete('ferias', [FeriaController::class, 'destroy']);
     Route::post('recesso', [RecessoController::class, 'store']);
+    Route::get('recesso', [RecessoController::class, 'index']);
     Route::delete('recesso', [RecessoController::class, 'destroy']);
     Route::apiResource('/dia-nao-util',  DiaNaoUtilController::class);
+    Route::get( '/proximos-feriados', [DiaNaoUtilController::class, 'proximosFeriados']);
+
 });
-Route::get('recesso', [RecessoController::class, 'index']);
 
 
 

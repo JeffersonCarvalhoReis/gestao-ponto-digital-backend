@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\BiometricException;
 use App\Models\Biometria;
 use App\Models\Funcionario;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
+use Throwable;
 
 class BiometriaController extends Controller
 {
@@ -19,6 +22,10 @@ class BiometriaController extends Controller
     public function capturarBiometria(Funcionario $funcionario)
     {
         $response = Http::timeout(0)->get("{$this->apiUrl}capture-hash/");
+
+        if (!$response->successful()) {
+            throw new BiometricException();
+        }
 
         if ($response->successful()) {
             $data = $response->json();
@@ -50,8 +57,15 @@ class BiometriaController extends Controller
 
         $templates = Biometria::all(['id', 'template'])->toArray();
 
+        try {
+            $response = Http::post("{$this->apiUrl}load-to-memory/", $templates);
 
-        $response = Http::post("{$this->apiUrl}load-to-memory/", $templates);
+            // Se a resposta for um erro HTTP, lança uma exceção
+            $response->throw();
+        }
+        catch (Throwable $th) {
+            throw new BiometricException("Erro inesperado ao conectar-se à API biométrica.", 500);
+        }
 
         return $response->successful()
             ? response()->json($response->json())
@@ -60,10 +74,19 @@ class BiometriaController extends Controller
     public function identificar()
     {
         $this->carregar();
+        try {
+            $response = Http::timeout(0)->get("{$this->apiUrl}identification/");
 
-        $response = Http::timeout(0)->get("{$this->apiUrl}identification/");
+            if (!$response->successful()) {
+                throw new BiometricException();
+            }
+        } catch (RequestException $e) {
+            throw new BiometricException("Falha na requisição biométrica: " . $e->getMessage(), 0, $e);
+        } catch (Throwable $th) {
+            throw new BiometricException("Erro inesperado ao conectar-se à API biométrica.", 0, $th);
+        }
 
-        $biometria = Biometria::find($response->json(('id')));
+        $biometria = Biometria::find($response->json('id'));
 
         if ($biometria) {
 
@@ -80,9 +103,6 @@ class BiometriaController extends Controller
 
             $biometria = Biometria::findOrFail($id);
             $biometria->delete();
-
-            $this->limparMemoria();
-            $this->carregar();
 
             return response()->json([
                 'message' => 'Biometria excluída com sucesso.'

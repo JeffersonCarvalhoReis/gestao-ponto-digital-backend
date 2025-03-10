@@ -12,9 +12,9 @@ class RecessoController extends Controller
 {
     public function __construct()
     {
-        // $this->middleware('permission:visualizar_recessos')->only('index');
-        // $this->middleware('permission:registrar_recessos')->only('store');
-        // $this->middleware('permission:excluir_recessos')->only('destroy');
+        $this->middleware('permission:visualizar_recessos')->only('index');
+        $this->middleware('permission:registrar_recessos')->only('store');
+        $this->middleware('permission:excluir_recessos')->only('destroy');
     }
 
 
@@ -52,10 +52,12 @@ class RecessoController extends Controller
         $dataFim = isset($validated['data_fim']) ? Carbon::create( $validated['data_fim']) : $dataInicio;
 
 
-        $datas = $dataInicio->daysUntil($dataFim)->map(function($data) use ($validated){
+        $datas = $dataInicio->daysUntil($dataFim)->map(function($data) use ($validated, $dataInicio, $dataFim){
             return [
                 'data' => $data->toDateString(),
                 'unidade_id' => $validated['unidade_id'] ?? null,
+                'data_inicio' => $dataInicio,
+                'data_fim' => $dataFim,
                 'tipo' => 'recesso',
                 'descricao' => 'Recesso',
                 'created_at' => now(),
