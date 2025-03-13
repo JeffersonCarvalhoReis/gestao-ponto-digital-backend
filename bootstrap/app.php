@@ -69,11 +69,11 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $exceptions->render(function (Throwable $e) {
 
-            if ($e instanceof BiometricException) {
-                return response()->json([
-                    'message' => 'Falha ao se contectar com o aparelho biometrico.'
-                ], 500);
-            }
+            // if ($e instanceof BiometricException) {
+            //     return response()->json([
+            //         'message' => 'Falha ao se contectar com o aparelho biometrico.'
+            //     ], 500);
+            // }
 
         });
         $exceptions->render(function (Throwable $e) {

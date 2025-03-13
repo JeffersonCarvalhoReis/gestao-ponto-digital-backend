@@ -24,6 +24,7 @@ Route::middleware(['auth:sanctum'])->group(function(){
     // Biometria
     Route::post('biometria/registrar/{funcionario}', [BiometriaController::class, 'capturarBiometria']);
     Route::delete('biometria/excluir/{id}', [BiometriaController::class, 'excluirBiometria']);
+    Route::get('biometria/carregar', [BiometriaController::class, 'carregar']);
 
     // Registro de Ponto
     Route::post('registro-ponto/biometria', [RegistroPontoController::class, 'buscarFuncionarioBiometria']);
