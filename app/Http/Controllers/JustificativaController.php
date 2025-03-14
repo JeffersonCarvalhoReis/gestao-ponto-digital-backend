@@ -232,7 +232,7 @@ class JustificativaController extends Controller
         }
 
         return response()->json([
-            'message' => 'Justificativas atualizadas com sucesso',
+            'message' => 'Justificativa atualizada com sucesso',
 
         ], 200);
     }
@@ -267,7 +267,7 @@ class JustificativaController extends Controller
         }
 
         return response()->json([
-            'message' => 'Justificativas excluídas com sucesso'
+            'message' => 'Justificativa excluída com sucesso'
         ], 200);
     }
 }

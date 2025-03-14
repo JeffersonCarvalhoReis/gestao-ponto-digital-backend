@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('justificativas', function (Blueprint $table) {
             $table->id();
             $table->text('motivo');
-            $table->text('motivo_recusa');
+            $table->text('motivo_recusa')->nullable();
             $table->string('anexo')->nullable();
             $table->date('data');
             $table->date('data_inicio');

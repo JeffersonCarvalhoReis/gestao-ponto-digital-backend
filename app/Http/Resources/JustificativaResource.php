@@ -18,6 +18,7 @@ class JustificativaResource extends JsonResource
         return [
             'id' => $this->id,
             'motivo' => $this->motivo,
+            'motivo_recusa' => $this->motivo_recusa,
             'anexo' => $this->anexo ? asset('storage/' . $this->anexo) : null,
             'data_inicio' => Carbon::parse($this->data_inicio)->format('d/m/Y'),
             'data_fim' => Carbon::parse($this->data_fim)->format('d/m/Y'),
