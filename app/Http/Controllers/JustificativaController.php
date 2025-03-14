@@ -2,10 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\JustificativaListResource;
+use App\Http\Resources\JustificativaResource;
 use App\Models\Funcionario;
 use App\Models\Justificativa;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Storage;
 
 class JustificativaController extends Controller
@@ -20,32 +23,105 @@ class JustificativaController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(string $id)
+    public function index(Request $request)
     {
+        // Inicia a query com joins
         $user = auth()->user();
-        $funcionario = Funcionario::findOrFail($id);
+        $query = Justificativa::query()
 
-        if (!$user->hasAnyRole(['admin', 'super admin']) && $funcionario->unidade_id !== $user->unidade_id) {
-            return response()->json(['message' => 'Acesso não autorizado'], 403);
+        ->join('funcionarios', 'justificativas.funcionario_id', '=', 'funcionarios.id')
+        ->join('unidades', 'funcionarios.unidade_id', '=', 'unidades.id')
+        ->selectRaw('
+            MIN(justificativas.id) as id,
+            justificativas.funcionario_id,
+            MAX(justificativas.motivo) as motivo,
+            MAX(justificativas.anexo) as anexo,
+            MAX(justificativas.status) as status,
+            MAX(justificativas.created_at) as criado,
+            justificativas.data_inicio,
+            justificativas.data_fim,
+            funcionarios.nome as funcionario,
+            unidades.nome as unidade
+        ')
+        ->groupBy(
+            'justificativas.funcionario_id',
+            'funcionarios.nome',
+            'unidades.nome',
+            'justificativas.data_inicio',
+            'justificativas.data_fim',
+            'justificativas.motivo',
+            'justificativas.status'
+        );
+        if (!$user->hasAnyRole(['admin', 'super admin'])) {
+            $query->where('funcionarios.unidade_id', $user->unidade_id);
         }
 
-        $justificativa = Justificativa::where('funcionario_id', $id)->get();
+        // Filtro por nome do funcionário
+        $query->when($request->nome, function ($query, $nome) {
+            $query->where('funcionarios.nome', 'like', "%$nome%");
+        });
+        $query->when($request->status, function ($query, $status) {
+            $query->where('status', $status);
+        });
 
-        return response()->json($justificativa, 200);
+        // Filtro por unidade
+        $query->when($request->unidade, function ($query, $unidade){
+            $query->where('unidades.id', $unidade);
+        });
+
+        // Ordenação
+        $order = $request->input('order', 'asc');
+        if ($request->filled('sortBy')) {
+            $sortBy = $request->input('sortBy');
+
+            // Mapeando sortBy para nomes reais das colunas
+            $columnsMap = [
+                'funcionario' => 'funcionarios.nome',
+                'unidade'     => 'unidades.nome',
+                'data_inicio' => 'justificativas.data_inicio',
+                'data_fim'    => 'justificativas.data_fim',
+                'status'      => 'status'
+            ];
+
+            if (isset($columnsMap[$sortBy])) {
+                $query->orderBy($columnsMap[$sortBy], $order);
+            }
+        } else {
+            $query->orderBy('criado', 'desc');
+        }
+
+        // Paginação
+        $perPage = $request->input('per_page', 10);
+        if ($perPage == -1) {
+            $perPage = $query->count();
+        }
+
+        $justificativasPaginado = $query->paginate($perPage);
+
+        $justificativas = JustificativaListResource::collection($justificativasPaginado);
+
+        return response()->json([
+            'data' => $justificativas,
+            'meta' => [
+                'current_page' => $justificativasPaginado->currentPage(),
+                'last_page'    => $justificativasPaginado->lastPage(),
+                'per_page'     => $justificativasPaginado->perPage(),
+                'total'        => $justificativasPaginado->total(),
+            ],
+        ]);
     }
+
 
     /**
      * Store a newly created resource in storage.
      */
     public function store(Request $request)
     {
-        $user = auth()->user();
 
         $funcionario = Funcionario::findOrFail($request->funcionario_id);
 
-        if (!$user->hasAnyRole(['admin', 'super admin']) && $funcionario->unidade_id !== $user->unidade_id) {
-            return response()->json(['message' => 'Acesso não autorizado'], 403);
-        }
+        Gate::authorize('store', $funcionario);
+
         $validated = $request->validate([
             'funcionario_id' => 'required|exists:funcionarios,id',
             'motivo' => 'required|string',
@@ -69,7 +145,7 @@ class JustificativaController extends Controller
                 'data_inicio' => $dataInicio,
                 'data_fim' => $dataFim,
                 'motivo' => $validated['motivo'],
-                'anexo' => $validated['anexo'],
+                'anexo' => $validated['anexo'] ?? null,
                 'created_at' => now(),
                 'updated_at' => now(),
             ];
@@ -83,10 +159,21 @@ class JustificativaController extends Controller
         ], 201);
     }
 
+    public function show($id)
+    {
+            $justificativa = Justificativa::with('funcionario')->findOrFail($id);
 
-    /**
-     * Update the specified resource in storage.
-     */
+            Gate::authorize('show', $justificativa);
+
+
+            $justificativa = new JustificativaResource($justificativa);
+            return response()->json($justificativa, 200);
+    }
+
+
+/**
+ * Update the specified resource in storage.
+ */
     public function update(Request $request, string $id)
     {
         $user = auth()->user();
@@ -96,49 +183,91 @@ class JustificativaController extends Controller
             return response()->json(['message' => 'Ação não autorizada'],403);
         }
 
-        $validated = $request->validate([
+         // Regras de validação condicionais
+        $rules = [
             'motivo' => 'nullable|string',
             'status' => 'nullable|in:pendente,aprovado,recusado',
-            'anexo' => 'nullable|file|mimes:jpg,jpeg,png,pdf,docx'
-        ]);
+        ];
 
+        if($request->status == 'recusado') {
+            $rules['motivo_recusa'] = 'required|string';
+        }
+
+        // Adiciona regra para anexo apenas se estiver presente na requisição
         if ($request->hasFile('anexo')) {
+            $rules['anexo'] = 'file|mimes:jpg,jpeg,png,pdf,docx';
+        }
+
+        $validated = $request->validate($rules);
+
+        // Obter os dados necessários para identificar todas as justificativas relacionadas
+        $funcionarioId = $justificativa->funcionario_id;
+        $unidadeId     = $justificativa->funcionario->unidade_id;
+        $dataInicio    = $justificativa->data_inicio;
+        $dataFim       = $justificativa->data_fim;
+        $motivo       = $justificativa->motivo;
+
+        // Buscar todas as justificativas com os mesmos critérios
+        $justificativasParaAtualizar = Justificativa::where('funcionario_id', $funcionarioId)
+            ->whereHas('funcionario', function ($query) use ($unidadeId) {
+                $query->where('unidade_id', $unidadeId);
+            })
+            ->where('data_inicio', $dataInicio)
+            ->where('data_fim', $dataFim)
+            ->where('motivo', $motivo)
+            ->get();
+
+        // Processar o anexo apenas uma vez
+        if ($request->hasFile('anexo')) {
+            // Excluir o anexo antigo se existir
             if ($justificativa->anexo) {
                 Storage::disk('public')->delete($justificativa->anexo);
             }
-
             $validated['anexo'] = $request->file('anexo')->store('justificativas', 'public');
         }
 
-        $justificativa->update($validated);
+        // Atualizar todas as justificativas encontradas
+        foreach ($justificativasParaAtualizar as $just) {
+            $just->update($validated);
+        }
 
         return response()->json([
-            'message' => 'Justificativa atualizada com sucesso',
-            'justificativa' => $justificativa
+            'message' => 'Justificativas atualizadas com sucesso',
+
         ], 200);
     }
-
     /**
      * Remove the specified resource from storage.
      */
     public function destroy(string $id)
     {
-        $user = auth()->user();
         $justificativa = Justificativa::findOrFail($id);
+        Gate::authorize('delete', $justificativa);
 
-        if (!$user->hasAnyRole(['admin', 'super admin']) && $justificativa->funcionario->unidade_id !== $user->unidade_id) {
+        $funcionarioId = $justificativa->funcionario_id;
+        $unidadeId     = $justificativa->funcionario->unidade_id;
+        $dataInicio    = $justificativa->data_inicio;
+        $dataFim       = $justificativa->data_fim;
+        // Busca todas as justificativas com os mesmos critérios
 
-            return response()->json(['message' => 'Acesso não autorizado'],403);
+        $justificativasParaExcluir = Justificativa::where('funcionario_id', $funcionarioId)
+            ->whereHas('funcionario', function ($query) use ($unidadeId) {
+                $query->where('unidade_id', $unidadeId);
+            })
+            ->where('data_inicio', $dataInicio)
+            ->where('data_fim', $dataFim)
+            ->get();
+
+        // Remove os anexos (se houver) e exclui
+        foreach ($justificativasParaExcluir as $just) {
+            if ($just->anexo) {
+                Storage::disk('public')->delete($just->anexo);
+            }
+            $just->delete();
         }
-
-        if ($justificativa->anexo) {
-            Storage::disk('public')->delete($justificativa->anexo);
-        }
-
-        $justificativa->delete();
 
         return response()->json([
-            'message' => 'Justificativa excluída com sucesso'
+            'message' => 'Justificativas excluídas com sucesso'
         ], 200);
     }
 }

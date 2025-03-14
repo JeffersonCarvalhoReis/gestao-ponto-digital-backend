@@ -183,12 +183,7 @@ class FuncionarioController extends Controller
         if (isset($data['data_nascimento'])) {
             $data['data_nascimento'] = Carbon::create($data['data_nascimento']);
         }
-        if ($request->hasFile('foto')) {
-            $file = $request->file('foto');
-            Log::info('Arquivo recebido:', ['nome' => $file->getClientOriginalName()]);
-        } else {
-            Log::info('Nenhum arquivo foi enviado.');
-        }
+
         if ($request->hasFile('foto')) {
             if ($funcionario->foto) {
                 Storage::disk('public')->delete($funcionario->foto);

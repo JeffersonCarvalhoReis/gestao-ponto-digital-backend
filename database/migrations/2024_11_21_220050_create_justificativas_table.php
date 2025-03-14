@@ -14,11 +14,12 @@ return new class extends Migration
         Schema::create('justificativas', function (Blueprint $table) {
             $table->id();
             $table->text('motivo');
+            $table->text('motivo_recusa');
             $table->string('anexo')->nullable();
             $table->date('data');
             $table->date('data_inicio');
             $table->date('data_fim');
-            $table->enum('status', ['pendente', 'aprovada', 'reprovada'])->default('pendente');
+            $table->enum('status', ['pendente', 'aprovado', 'recusado'])->default('pendente');
             $table->foreignId('funcionario_id')->constrained()->onDelete('cascade');
             $table->timestamps();
         });

@@ -10,6 +10,9 @@ class Justificativa extends Model
     use HasFactory;
     protected $fillable = [
         'motivo',
+        'motivo_recusa',
+        'data_inicio',
+        'data_fim',
         'data',
         'anexo',
         'status',

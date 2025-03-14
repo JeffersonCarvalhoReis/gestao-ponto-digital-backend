@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Http\Resources\UnidadeResource;
 use App\Models\Localidade;
 use App\Models\Unidade;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 
 class UnidadeController extends Controller
