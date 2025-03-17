@@ -19,16 +19,16 @@ class JustificativaPolicy
 
     public function delete(User $user, Justificativa $justificativa): bool
     {
-        return $this->hasPermission($user, $justificativa);
+        return $this->hasPermission($user, $justificativa, $justificativa->status == 'pendente');
     }
 
 
-    private function hasPermission(User $user, Justificativa $justificativa): bool
+    private function hasPermission(User $user, Justificativa $justificativa, bool $status = true): bool
     {
         if ($user->hasRole(['admin', 'super admin'])) {
             return true;
         }
 
-        return $user->unidade_id === $justificativa->funcionario->unidade_id;
+        return $user->unidade_id === $justificativa->funcionario->unidade_id && $status;
     }
 }

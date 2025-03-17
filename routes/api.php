@@ -62,7 +62,21 @@ Route::middleware(['auth:sanctum'])->group(function(){
     Route::apiResource('/dia-nao-util',  DiaNaoUtilController::class);
     Route::get( '/proximos-feriados', [DiaNaoUtilController::class, 'proximosFeriados']);
 
+      // Get all notifications for the authenticated user
+    Route::get('/notifications', function () {
+        return [
+            'notifications' => auth()->user()->unreadNotifications
+        ];
+    });
+
+    // Mark a notification as read
+    Route::post('/notifications/{id}/read', function ($id) {
+        auth()->user()->notifications()->where('id', $id)->update(['read_at' => now()]);
+        return response()->json(['success' => true]);
+    });
+
 });
+
 
 
 

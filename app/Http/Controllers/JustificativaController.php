@@ -2,6 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\JustificativaCriada;
+use App\Events\JustificativaStatusChanged;
+use App\Models\User;
+use App\Notifications\JustificativaNotification;
+use Illuminate\Support\Facades\Notification;
 use App\Http\Resources\JustificativaListResource;
 use App\Http\Resources\JustificativaResource;
 use App\Models\Funcionario;
@@ -146,13 +151,33 @@ class JustificativaController extends Controller
                 'data_fim' => $dataFim,
                 'motivo' => $validated['motivo'],
                 'anexo' => $validated['anexo'] ?? null,
+                'status' => 'pendente',
                 'created_at' => now(),
                 'updated_at' => now(),
             ];
         });
 
-        Justificativa::insert(collect($datas)->toArray() );
+        Justificativa::insert(collect($datas)->toArray());
 
+        $justificativa = Justificativa::where('funcionario_id', $validated['funcionario_id'])
+        ->whereDate('data_inicio', $dataInicio)
+        ->whereDate('data_fim', $dataFim)
+        ->first();
+
+        event(new JustificativaCriada($justificativa));
+
+        $adminUsers = User::role(['admin', 'super admin'])->get();
+        $funcionario = Funcionario::find($validated['funcionario_id']);
+
+        Notification::send($adminUsers, new JustificativaNotification(
+            $justificativa,
+            'Nova Justificativa',
+            "O funcionário {$funcionario->nome} enviou uma nova justificativa.",
+            'pendente',
+            'mdi-file-document'
+
+
+        ));
 
         return response()->json([
             'message' => 'Justificativa criada com sucesso',
@@ -205,7 +230,7 @@ class JustificativaController extends Controller
         $unidadeId     = $justificativa->funcionario->unidade_id;
         $dataInicio    = $justificativa->data_inicio;
         $dataFim       = $justificativa->data_fim;
-        $motivo       = $justificativa->motivo;
+        $motivo        = $justificativa->motivo;
 
         // Buscar todas as justificativas com os mesmos critérios
         $justificativasParaAtualizar = Justificativa::where('funcionario_id', $funcionarioId)
@@ -216,6 +241,10 @@ class JustificativaController extends Controller
             ->where('data_fim', $dataFim)
             ->where('motivo', $motivo)
             ->get();
+        //excluir anexo
+        if ($request->excluir_anexo) {
+            Storage::disk('public')->delete($justificativa->anexo);
+        }
 
         // Processar o anexo apenas uma vez
         if ($request->hasFile('anexo')) {
@@ -229,7 +258,38 @@ class JustificativaController extends Controller
         // Atualizar todas as justificativas encontradas
         foreach ($justificativasParaAtualizar as $just) {
             $just->update($validated);
+            if ($request->excluir_anexo) {
+                $just->anexo = null;
+                $just->save();
+            }
         }
+
+        if (isset($validated['status']) && in_array($validated['status'], ['aprovado', 'recusado'])) {
+            $justificativa = Justificativa::with('funcionario')->findOrFail($id);
+
+            // Broadcast status change
+            event(new JustificativaStatusChanged($justificativa, $validated['status']));
+
+            // Get users from the same unit who are not admins
+            $unidadeId = $justificativa->funcionario->unidade_id;
+            $usersInUnit = User::where('unidade_id', $unidadeId)
+                ->whereDoesntHave('roles', function($query) {
+                    $query->whereIn('name', ['admin', 'super admin']);
+                })->get();
+
+            $statusText = $validated['status'] === 'aprovado' ? 'aprovada' : 'recusada';
+            $icon = $validated['status'] === 'aprovado' ? 'mdi-check-circle' : 'mdi-close-circle';
+
+            // Send notification to users in the same unit
+            Notification::send($usersInUnit, new JustificativaNotification(
+                $justificativa,
+                "Justificativa {$statusText}",
+                "A justificativa de {$justificativa->funcionario->nome} foi {$statusText}.",
+                $validated['status'],
+                $icon
+            ));
+        }
+
 
         return response()->json([
             'message' => 'Justificativa atualizada com sucesso',
