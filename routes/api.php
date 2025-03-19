@@ -42,7 +42,6 @@ Route::middleware(['auth:sanctum'])->group(function(){
     Route::apiResource('/localidades',   LocalidadeController::class);
     Route::apiResource('/cargos',  CargoController::class);
     Route::apiResource('/unidades',  UnidadeController::class);
-    //ainda falta implmentar
     Route::apiResource('/justificativas',  JustificativaController::class);
 
     // Dados dos funcionarios

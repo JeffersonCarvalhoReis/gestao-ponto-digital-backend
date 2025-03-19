@@ -9,163 +9,167 @@ use App\Models\Justificativa;
 use App\Models\Recesso;
 use App\Models\RegistroPonto;
 use App\Services\DiaNaoUtilService;
+use App\Services\RelatorioService;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class RelatorioPontoController extends Controller
 {
     protected $diaNaoUtilService;
+    protected $relatorioService;
 
-
-    public function __construct(DiaNaoUtilService $diaNaoUtilService)
+    public function __construct(DiaNaoUtilService $diaNaoUtilService, RelatorioService $relatorioService)
     {
         $this->diaNaoUtilService = $diaNaoUtilService;
+        $this->relatorioService = $relatorioService;
         $this->middleware('permission:gerar_relatorios')->only('gerarRelatorio');
-
     }
 
+    /**
+     * Gera relatório de ponto dos funcionários
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function gerarRelatorio(Request $request)
     {
-        $request->validate([
-            'unidade_id' => 'required|exists:unidades,id',
-            'mes' => 'required|date_format:m',
-            'ano' => 'required|date_format:Y'
-        ]);
+        $this->validarRequisicao($request);
 
-        $unidadeId = $request->unidade_id;
+        $unidadeId = $request->unidade;
         $mes = $request->mes;
         $ano = $request->ano;
 
-        $query = Funcionario::query();
+        // Obtém funcionários com base nas permissões do usuário
+        $funcionarios = $this->obterFuncionarios($unidadeId);
 
-        $user = auth()->user();
+        // Define o período do relatório (mês completo + semanas completas)
+        $periodo = $this->definirPeriodo($ano, $mes);
+
+        // Preenche dados de dias não úteis se necessário
+        $this->preencherDiasNaoUteis();
+
+        // Obtém todos os dados necessários para o relatório
+        $dadosRelatorio = $this->obterDadosRelatorio($periodo, $unidadeId);
+
+        // Processa os dados e gera o relatório
+        $resultado = $this->relatorioService->processarRelatorio(
+            $funcionarios,
+            $periodo,
+            $dadosRelatorio
+        );
+
+        return response()->json($resultado, 200);
+    }
+
+    /**
+     * Valida os dados da requisição
+     */
+    private function validarRequisicao(Request $request)
+    {
+        $request->validate([
+            'unidade' => 'required|exists:unidades,id',
+            'mes' => 'required|date_format:m',
+            'ano' => 'required|date_format:Y'
+        ]);
+    }
+
+    /**
+     * Obtém os funcionários com base nas permissões do usuário
+     */
+    private function obterFuncionarios($unidadeId)
+    {
+        $query = Funcionario::query();
+        $user = Auth::user();
 
         if (!$user->hasAnyRole(['admin', 'super admin'])) {
             $query->where('unidade_id', $user->unidade_id);
-        }else {
+        } else {
             $query->where('unidade_id', $unidadeId);
         }
 
-        $funcionarios = $query->get();
-
-
-        $inicioPeriodo = Carbon::create($ano, $mes, 1)->startOfWeek();
-        $fimPeriodo = Carbon::create($ano, $mes)->endOfMonth()->endOfWeek();
-        $diasDoMes = CarbonPeriod::create($inicioPeriodo, $fimPeriodo);
-
-        $this->diaNaoUtilService->preencherFinaisDeSemana();
-        $this->diaNaoUtilService->preencherFeriados();
-
-        $diasNaoUteis = DiaNaoUtil::whereBetween('data', [$inicioPeriodo, $fimPeriodo])->get();
-        $ferias = Feria::whereBetween('data', [$inicioPeriodo, $fimPeriodo])->get();
-        $recessos = Recesso::where(function($query) use ($unidadeId){
-            $query->where('unidade_id', $unidadeId)
-                ->orWhereNull('unidade_id');
-        })->whereBetween('data', [$inicioPeriodo, $fimPeriodo])->get();
-        $justificativas = Justificativa::whereBetween('data', [$inicioPeriodo, $fimPeriodo])->get();
-        $registrosPonto = RegistroPonto::whereBetween('data_local', [$inicioPeriodo, $fimPeriodo])->get();
-
-        $relatorioSemanas = [];
-        $relatorioDias = [];
-
-        foreach ($funcionarios as $funcionario) {
-            $horasPorSemana = [];
-            $funcionarioRelatorioDias = [];
-
-            foreach ($diasDoMes as $dia) {
-                $diaRelatorio = $this->consolidarDadosDia(
-                    $dia->toDateString(),
-                    $recessos,
-                    $funcionario->id,
-                    $diasNaoUteis,
-                    $ferias,
-                    $justificativas,
-                    $registrosPonto
-                );
-
-                $funcionarioRelatorioDias[] = $diaRelatorio;
-
-                $semana = $dia->weekOfMonth;
-                if (!isset($horasPorSemana[$semana])) {
-                    $horasPorSemana[$semana] = 0;
-                }
-                $horasPorSemana[$semana] += $diaRelatorio['minutos_trabalhados'];
-            }
-
-            $horasPorSemanaFormatado = array_map(function ($minutos) {
-                $horas = intdiv($minutos, 60);
-                $restoMinutos = $minutos % 60;
-                return sprintf('%02d:%02d', $horas, $restoMinutos);
-            }, $horasPorSemana);
-
-            $relatorioSemanas[$funcionario->id] = $horasPorSemanaFormatado;
-            $relatorioDias[$funcionario->id] = $funcionarioRelatorioDias;
-        }
-
-        return response()->json([
-            'relatorio_semanas' => $relatorioSemanas,
-            'relatorio_dias' => $relatorioDias,
-        ], 200);
-
+        return $query->get();
     }
 
-    function consolidarDadosDia($dia, $recessos, $funcionarioId, $diasNaoUteis, $ferias, $justificativas, $registrosPonto)
-     {
-        $diaNaoUtil = $diasNaoUteis->firstWhere('data', $dia);
-        $recesso = $recessos->firstWhere('data', $dia);
-        $feriasFuncionario = $ferias->where('funcionario_id', $funcionarioId)->firstWhere('data', $dia);
+    /**
+     * Define o período do relatório (mês completo + semanas completas)
+     */
+    private function definirPeriodo($ano, $mes)
+    {
+        $inicioPeriodo = Carbon::create($ano, $mes, 1)->startOfWeek();
+        $fimPeriodo = Carbon::create($ano, $mes)->endOfMonth()->endOfWeek();
 
-        $justificativa = $justificativas->where('funcionario_id', $funcionarioId)->firstWhere('data', $dia);
+        return CarbonPeriod::create($inicioPeriodo, $fimPeriodo);
+    }
 
-        $registrosPontoDia = $registrosPonto->filter(function ($registro) use ($funcionarioId, $dia) {
-            return $registro->funcionario_id === $funcionarioId &&
-                   Carbon::parse($registro->data_local)->toDateString() === $dia;
-        });
+    /**
+     * Preenche dados de dias não úteis se necessário
+     */
+    private function preencherDiasNaoUteis()
+    {
+        $this->diaNaoUtilService->preencherFinaisDeSemana();
+        $this->diaNaoUtilService->preencherFeriados();
+    }
 
-        $status = 'Falta';
-        $minutosTrabalhados = 0;
-
-        if ($registrosPontoDia->isNotEmpty()) {
-            $status = 'Presente';
-
-            $minutosTrabalhados = $registrosPontoDia->sum(function ($registro) {
-                if($registro->hora_saida){
-                    return Carbon::parse($registro->hora_entrada)
-                        ->diffInMinutes(Carbon::parse($registro->hora_saida));
-                }
-                return 0;
-            });
-
-        }elseif ($justificativa) {
-            $status = match ($justificativa->status) {
-                'pendente' => 'Falta',
-                'aprovada' => 'Justificado',
-                'recusada' => 'Falta',
-            };
-        } elseif ($diaNaoUtil) {
-            $status = 'Dia Não Útil';
-        } elseif ($feriasFuncionario) {
-            $status = $feriasFuncionario->descricao;
-        } elseif($recesso) {
-            $status = 'Recesso';
-        } elseif ($dia > Carbon::today()->toDateString()) {
-            $status = '';
-        }
-
-        $horasTrabalhadas = sprintf('%02d:%02d', intdiv($minutosTrabalhados, 60), $minutosTrabalhados % 60);
-
+    /**
+     * Obtém todos os dados necessários para o relatório
+     */
+    private function obterDadosRelatorio($periodo, $unidadeId)
+    {
+        $inicioPeriodo = $periodo->getStartDate();
+        $fimPeriodo = $periodo->getEndDate();
 
         return [
-            'data' => $dia,
-            'status' => $status,
-            'minutos_trabalhados' => $minutosTrabalhados,
-            'horas_trabalhadas' => $horasTrabalhadas,
-            'justificativa' => $justificativa?->motivo,
-            'justificativa_status' => $justificativa?->status,
-            'descricao_dia_nao_util' => $diaNaoUtil?->descricao,
+            'diasNaoUteis' => $this->obterDiasNaoUteis($inicioPeriodo, $fimPeriodo),
+            'ferias' => $this->obterFerias($inicioPeriodo, $fimPeriodo),
+            'recessos' => $this->obterRecessos($unidadeId, $inicioPeriodo, $fimPeriodo),
+            'justificativas' => $this->obterJustificativas($inicioPeriodo, $fimPeriodo),
+            'registrosPonto' => $this->obterRegistrosPonto($inicioPeriodo, $fimPeriodo)
         ];
     }
 
+    /**
+     * Obtém dias não úteis no período
+     */
+    private function obterDiasNaoUteis($inicioPeriodo, $fimPeriodo)
+    {
+        return DiaNaoUtil::whereBetween('data', [$inicioPeriodo, $fimPeriodo])->get();
+    }
 
+    /**
+     * Obtém férias no período
+     */
+    private function obterFerias($inicioPeriodo, $fimPeriodo)
+    {
+        return Feria::whereBetween('data', [$inicioPeriodo, $fimPeriodo])->get();
+    }
+
+    /**
+     * Obtém recessos no período
+     */
+    private function obterRecessos($unidadeId, $inicioPeriodo, $fimPeriodo)
+    {
+        return Recesso::where(function($query) use ($unidadeId) {
+            $query->where('unidade_id', $unidadeId)
+                  ->orWhereNull('unidade_id');
+        })->whereBetween('data', [$inicioPeriodo, $fimPeriodo])->get();
+    }
+
+    /**
+     * Obtém justificativas no período
+     */
+    private function obterJustificativas($inicioPeriodo, $fimPeriodo)
+    {
+        return Justificativa::whereBetween('data', [$inicioPeriodo, $fimPeriodo])->get();
+    }
+
+    /**
+     * Obtém registros de ponto no período
+     */
+    private function obterRegistrosPonto($inicioPeriodo, $fimPeriodo)
+    {
+        return RegistroPonto::whereBetween('data_local', [$inicioPeriodo, $fimPeriodo])->get();
+    }
 }
+
