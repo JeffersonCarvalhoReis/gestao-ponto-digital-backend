@@ -1,38 +1,39 @@
 <?php
-
 namespace Database\Seeders;
 
+use App\Models\DadosContrato;
 use App\Models\Funcionario;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Faker\Factory as Faker;
 
 class FuncionarioSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
-        Funcionario::create([
-            'nome' => 'João Silva',
-            'data_nascimento' => '1995-10-02',
-            'cpf' => '12345678901',
-            'cargo_id' => 1,
-            'unidade_id' => 1,
-        ]);
-        Funcionario::create([
-            'nome' => 'Maria Andrade',
-            'data_nascimento' => '1989-12-14',
-            'cpf' => '45465456',
-            'cargo_id' => 2,
-            'unidade_id' => 2,
-        ]);
-        Funcionario::create([
-            'nome' => 'Sebastião Machado',
-            'data_nascimento' => '1965-09-29',
-            'cpf' => '455545465488',
-            'cargo_id' => 2,
-            'unidade_id' => 2,
-        ]);
+        $faker = Faker::create('pt_BR');
+
+        for ($unidade = 1; $unidade <= 11; $unidade++) {
+            for ($i = 1; $i <= 50; $i++) {
+                $cpf = $faker->unique()->cpf(false); // false para vir sem máscara
+
+                $funcionario = Funcionario::create([
+                    'nome' => $faker->name,
+                    'data_nascimento' => $faker->date('Y-m-d', '-18 years'),
+                    'cpf' => $cpf,
+                    'cargo_id' => rand(1, 6),
+                    'unidade_id' => $unidade,
+                ]);
+
+                DadosContrato::create([
+                    'vinculo' => $faker->randomElement(['Contratado', 'Efetivo', 'Comissionado']),
+                    'carga_horaria' => $faker->randomElement([20, 30, 40]),
+                    'data_admissao' => $faker->date('Y-m-d', '-5 years'),
+                    'salario_base' => $faker->randomFloat(2, 1200, 5000),
+                    'funcionario_id' => $funcionario->id,
+                ]);
+            }
+        }
     }
 }
+
+

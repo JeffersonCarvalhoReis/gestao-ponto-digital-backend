@@ -19,8 +19,8 @@ class UnidadeResource extends JsonResource
             'nome' => $this->nome,
             'localidade' => $this->localidade->nome,
             'localidade_id' => $this->localidade_id,
-            'cnes' => $this->cnes
-
+            'cnes' => $this->cnes,
+            'deletavel' => $this->users()->count() === 0 && $this->funcionarios()->count() === 0
         ];
     }
 }

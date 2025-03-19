@@ -16,7 +16,7 @@ class UsersSeeder extends Seeder
             'name'=> 'admin',
             'email' => 'admin@email.com',
             'password' => '123',
-            'unidade_id' => '2'
+            'unidade_id' => '1'
 
         ]);
 
@@ -32,8 +32,8 @@ class UsersSeeder extends Seeder
         $gestor1->assignRole('gestor');
 
         $gestor2 = User::create([
-            'name'=> 'gestor2',
-            'email' => 'gestor2@email.com',
+            'name'=> 'barreiros',
+            'email' => 'barreiros@email.com',
             'password' => '123',
             'unidade_id' => '2'
         ]);
@@ -41,13 +41,40 @@ class UsersSeeder extends Seeder
         $gestor2->assignRole('gestor');
 
         $gestor3 = User::create([
-            'name'=> 'gestor3',
-            'email' => 'gestor3@email.com',
+            'name'=> 'rioverde',
+            'email' => 'rioverde@email.com',
             'password' => '123',
             'unidade_id' => '3'
         ]);
 
         $gestor3->assignRole('gestor');
+
+        $almas = User::create([
+            'name'=> 'almas',
+            'email' => 'almas@email.com',
+            'password' => '123',
+            'unidade_id' => '4'
+        ]);
+
+        $almas->assignRole('gestor');
+
+        $lages = User::create([
+            'name'=> 'lages',
+            'email' => 'lages@email.com',
+            'password' => '123',
+            'unidade_id' => '3'
+        ]);
+
+        $lages->assignRole('gestor');
+
+        $maravilha = User::create([
+            'name'=> 'maravilha',
+            'email' => 'maravilha@email.com',
+            'password' => '123',
+            'unidade_id' => '3'
+        ]);
+
+        $maravilha->assignRole('gestor');
 
         $user = User::create([
             'name'=> 'user',

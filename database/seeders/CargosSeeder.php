@@ -20,7 +20,16 @@ class CargosSeeder extends Seeder
             'nome' => 'Auxiliar de serviços gerais'
         ]);
         Cargo::create([
-            'nome' => 'Auxiliar administrativo'
+            'nome' => 'Coordenador'
+        ]);
+        Cargo::create([
+            'nome' => 'Digitador'
+        ]);
+        Cargo::create([
+            'nome' => 'Enfermeiro'
+        ]);
+        Cargo::create([
+            'nome' => 'Cozinheiro'
         ]);
     }
 }

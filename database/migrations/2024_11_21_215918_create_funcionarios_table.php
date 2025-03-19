@@ -18,7 +18,7 @@ return new class extends Migration
             $table->string('cpf')->unique();
             $table->string('foto')->nullable();
             $table->foreignId('cargo_id')->nullable()->constrained()->onDelete('set null');
-            $table->foreignId('unidade_id')->nullable()->constrained()->onDelete('set null');
+            $table->foreignId('unidade_id')->constrained()->onDelete('cascade');
             $table->timestamps();
         });
     }

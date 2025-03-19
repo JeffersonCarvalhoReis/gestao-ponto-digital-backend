@@ -24,6 +24,7 @@ class FeriasResource extends JsonResource
             'funcionario'    => $this->funcionario,
             'unidade'        => $this->unidade,
             'total_dias'     => $this->total_dias,
+            'deletavel'      => true
         ];
     }
 }

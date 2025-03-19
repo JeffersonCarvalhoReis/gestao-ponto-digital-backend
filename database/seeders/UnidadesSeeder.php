@@ -14,19 +14,59 @@ class UnidadesSeeder extends Seeder
     public function run(): void
     {
         Unidade::create([
-            'nome' => 'Hospital',
+            'nome' => 'Hospital Municipal Amélia de Carvalho',
             'localidade_id' => 1,
-            'cnes' => '123456789'
+            'cnes' => null
         ]);
         Unidade::create([
-            'nome' => 'Caps',
+            'nome' => 'Caps Lar da Esperança',
+            'localidade_id' => 1,
+            'cnes' => null
+        ]);
+        Unidade::create([
+            'nome' => 'UBSF Breno de Carvalho Oliveira',
+            'localidade_id' => 1,
+            'cnes' => null
+        ]);
+        Unidade::create([
+            'nome' => 'Secretaria Municipal de Saúde de Itaguaçu da Bahia',
+            'localidade_id' => 1,
+            'cnes' => null
+        ]);
+        Unidade::create([
+            'nome' => 'Centro de Referência',
+            'localidade_id' => 1,
+            'cnes' => null
+        ]);
+        Unidade::create([
+            'nome' => 'EAP Maravilha',
+            'localidade_id' => 5,
+            'cnes' => null
+        ]);
+        Unidade::create([
+            'nome' => 'PSF Manoel Nogueira dos Santos Filho Badéu',
             'localidade_id' => 2,
-            'cnes' => '987654321'
+            'cnes' => null
         ]);
         Unidade::create([
-            'nome' => 'Breno',
+            'nome' => 'UBSF Antônio Felicidade',
             'localidade_id' => 3,
-            'cnes' => '45465465'
+            'cnes' => null
+        ]);
+        Unidade::create([
+            'nome' => 'UBSF Sede',
+            'localidade_id' => 1,
+            'cnes' => null
+        ]);
+        Unidade::create([
+            'nome' => 'UBSF Almas',
+            'localidade_id' => 4,
+            'cnes' => null
+        ]);
+        Unidade::create([
+            'nome' => 'UBSF Lages',
+            'localidade_id' => 5,
+            'cnes' => null
         ]);
     }
 }

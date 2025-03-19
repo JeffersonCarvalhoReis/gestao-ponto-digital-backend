@@ -15,8 +15,9 @@ class CargoResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id' => $this->id,
-            'nome' => $this->nome,
+            'id'        => $this->id,
+            'nome'      => $this->nome,
+            'deletavel' => true
         ];
     }
 }

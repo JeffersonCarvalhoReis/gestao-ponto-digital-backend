@@ -22,5 +22,14 @@ class LocalidadesSeeder extends Seeder
         Localidade::create([
             'nome' => 'Rio Verde'
         ]);
+        Localidade::create([
+            'nome' => 'Almas'
+        ]);
+        Localidade::create([
+            'nome' => 'Lages'
+        ]);
+        Localidade::create([
+            'nome' => 'Maravilha'
+        ]);
     }
-}
+    }

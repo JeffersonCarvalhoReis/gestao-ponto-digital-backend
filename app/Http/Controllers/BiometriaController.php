@@ -26,10 +26,14 @@ class BiometriaController extends Controller
     {
         $response = Http::timeout(0)->get("{$this->apiUrl}capture-hash/");
 
-        if (!$response->successful()) {
-            throw new BiometricException();
-        }
 
+        if ($response['message']== "Error on Capture: 513") {
+            Log::info("Cancelado");
+            throw new BiometricException("Captura cancelada");
+        }
+        if ($response['message'] == "Error on Capture: 261") {
+            throw new BiometricException("Dispositivo não encontrado");
+        }
         if ($response->successful()) {
             $data = $response->json();
 
@@ -65,9 +69,6 @@ class BiometriaController extends Controller
 
         try {
             Http::post("{$this->apiUrl}load-to-memory/", $this->templates);
-            Log::info('carregou templates');
-
-
         }
         catch (Throwable $th) {
             throw new BiometricException("Erro inesperado ao conectar-se à API biométrica.", 500);
@@ -92,7 +93,6 @@ class BiometriaController extends Controller
                 throw new BiometricException("Captura cancelada");
             }
             if ($response['message'] == "Error on Capture: 261") {
-                Log::info("Dispositivo nao encontrado");
                 throw new BiometricException("Dispositivo não encontrado");
             }
         } catch (RequestException $e) {

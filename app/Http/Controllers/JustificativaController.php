@@ -6,6 +6,7 @@ use App\Events\JustificativaCriada;
 use App\Events\JustificativaStatusChanged;
 use App\Models\User;
 use App\Notifications\JustificativaNotification;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use App\Http\Resources\JustificativaListResource;
 use App\Http\Resources\JustificativaResource;
