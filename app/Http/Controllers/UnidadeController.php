@@ -27,6 +27,9 @@ class UnidadeController extends Controller
         $query->when($request->nome, function ( $query, $nome ) {
             $query->where('nome','like', "%$nome%");
         });
+        $query->when($request->id, function ( $query, $id ) {
+            $query->where('id', $id);
+        });
 
         $perPage = $request->input('per_page', 10);
         if($perPage == -1) {

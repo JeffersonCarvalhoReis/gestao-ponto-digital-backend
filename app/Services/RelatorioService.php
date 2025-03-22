@@ -4,6 +4,7 @@ namespace App\Services;
 
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
+use Log;
 
 class RelatorioService
 {
@@ -27,8 +28,10 @@ class RelatorioService
                 $dadosRelatorio
             );
 
-            $relatorioSemanas[$funcionario->id] = $resultado['horasPorSemana'];
-            $relatorioDias[$funcionario->id] = $resultado['relatorioDias'];
+            $relatorioSemanas[$funcionario->nome] = $resultado['horasPorSemana'];
+
+            $relatorioDias[$funcionario->nome] = $resultado['relatorioDias'];
+
         }
 
         return [
@@ -125,6 +128,7 @@ class RelatorioService
             'status' => $resultado['status'],
             'minutos_trabalhados' => $resultado['minutosTrabalhados'],
             'horas_trabalhadas' => $resultado['horasTrabalhadas'],
+            'biometrico' => $resultado['biometrico'],
             'justificativa' => $justificativa?->motivo,
             'justificativa_status' => $justificativa?->status,
             'descricao_dia_nao_util' => $diaNaoUtil?->descricao,
@@ -162,16 +166,23 @@ class RelatorioService
     {
         $status = 'Falta';
         $minutosTrabalhados = 0;
+        $pontoBiometrico = false;
+
 
         if ($registrosPontoDia->isNotEmpty()) {
             $status = 'Presente';
             $minutosTrabalhados = $this->calcularMinutosTrabalhados($registrosPontoDia);
+            $ponto =$registrosPontoDia->first();
+            $pontoBiometrico = $ponto->biometrico;
+
         } elseif ($feriasFuncionario) {
             $status = $feriasFuncionario->descricao;
         } elseif ($recesso) {
             $status = 'Recesso';
-        } elseif ($diaNaoUtil) {
-            $status = 'Dia Não Útil';
+        } elseif ($diaNaoUtil?->tipo === 'feriado') {
+            $status = 'Feriado';
+        } elseif ($diaNaoUtil?->tipo === 'final_de_semana') {
+            $status = 'Final de Semana';
         }  elseif ($justificativa) {
             $status = $this->determinarStatusJustificativa($justificativa);
         } elseif ($dia > Carbon::today()->toDateString()) {
@@ -183,7 +194,8 @@ class RelatorioService
         return [
             'status' => $status,
             'minutosTrabalhados' => $minutosTrabalhados,
-            'horasTrabalhadas' => $horasTrabalhadas
+            'horasTrabalhadas' => $horasTrabalhadas,
+            'biometrico' => $pontoBiometrico
         ];
     }
 
@@ -213,7 +225,7 @@ class RelatorioService
     private function determinarStatusJustificativa($justificativa)
     {
         return match ($justificativa->status) {
-            'pendente' => 'Falta',
+            'pendente' => 'Pendente',
             'aprovado' => 'Justificado',
             'recusado' => 'Falta',
         };
@@ -229,5 +241,22 @@ class RelatorioService
     {
         return sprintf('%02d:%02d', intdiv($minutos, 60), $minutos % 60);
     }
+
+    public function mapearStatusParaSigla(string $status): string
+{
+    return match($status) {
+        'Falta' => 'F',
+        'Presente' => 'P',
+        'Feriado' => 'FR',
+        'Final de Semana' => 'FS',
+        'Recesso' => 'R',
+        'Justificado' => 'J',
+        'Pendente' => 'PE',
+        'Férias' => 'FE',
+        '' => '-',
+        default => 'L',
+    };
+}
+
 }
 

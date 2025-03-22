@@ -2,18 +2,22 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\RelatorioPontoExport;
 use App\Models\DiaNaoUtil;
 use App\Models\Feria;
 use App\Models\Funcionario;
 use App\Models\Justificativa;
 use App\Models\Recesso;
 use App\Models\RegistroPonto;
+use App\Models\Unidade;
 use App\Services\DiaNaoUtilService;
 use App\Services\RelatorioService;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Log;
+use Maatwebsite\Excel\Facades\Excel;
 
 class RelatorioPontoController extends Controller
 {
@@ -25,6 +29,69 @@ class RelatorioPontoController extends Controller
         $this->diaNaoUtilService = $diaNaoUtilService;
         $this->relatorioService = $relatorioService;
         $this->middleware('permission:gerar_relatorios')->only('gerarRelatorio');
+    }
+
+    public function exportarRelatorioExcel(Request $request)
+    {
+        $this->validarRequisicao($request);
+
+        $unidadeId = $request->unidade;
+        $mes = $request->mes;
+        $ano = $request->ano;
+
+        $funcionarios = $this->obterFuncionarios($unidadeId);
+        $periodo = $this->definirPeriodoMes($ano, $mes);
+        $this->preencherDiasNaoUteis();
+        $dadosRelatorio = $this->obterDadosRelatorio($periodo, $unidadeId);
+
+        $resultado = $this->relatorioService->processarRelatorio($funcionarios, $periodo, $dadosRelatorio);
+
+        $unidade = Unidade::find($unidadeId);
+
+        $cabecalho = ['Funcionário'];
+        foreach ($periodo as $data) {
+            $cabecalho[] = $data->format('j') . ' ' . ucfirst(substr($data->translatedFormat('D'), 0, 3));
+        }
+        // Transforma o resultado em uma Collection simples para exportação
+        $linhasExportacao = [];
+
+        $relatorioDias = $resultado['relatorio_dias'];
+        $dadosSemanais = $resultado['relatorio_semanas'];
+        $linhasExportacao = [];
+        $linhasExportacao[] = $cabecalho;
+
+        foreach ($relatorioDias as $nomeFuncionario => $registros) {
+            foreach ($registros as $registro) {
+                $siglaStatus = $this->relatorioService->mapearStatusParaSigla($registro['status']);
+
+                $linhasExportacao[] = [
+                    'funcionario' => $nomeFuncionario,
+                    'data' => $registro['data'],
+                    'sigla_status' => $siglaStatus,
+                    'horas_trabalhadas' => $registro['horas_trabalhadas'],
+                    'justificativa' => $registro['justificativa'] ?? '',
+                    'status_justificativa' => $registro['justificativa_status'] ?? '',
+                    'descricao_dia_nao_util' => $registro['descricao_dia_nao_util'] ?? '',
+                ];
+            }
+        }
+        $linhasExportacaoSemanais = [];
+
+        foreach ($dadosSemanais as $nomeFuncionario => $registros) {
+            // Inicializa um array para armazenar os registros do funcionário em uma linha
+            if (!isset($linhasExportacaoSemanais[$nomeFuncionario])) {
+                $linhasExportacaoSemanais[$nomeFuncionario] = ['funcionario' => $nomeFuncionario];
+            }
+
+            // Adiciona os registros como colunas
+            foreach ($registros as $index => $registro) {
+                $linhasExportacaoSemanais[$nomeFuncionario]["data_$index"] = str_replace(':', 'h', $registro) ;
+            }
+        }
+        $linhasExportacaoSemanais = array_values($linhasExportacaoSemanais);
+
+
+        return Excel::download(new RelatorioPontoExport(collect($linhasExportacao), collect($linhasExportacaoSemanais), $ano, $mes, $unidade->nome), 'relatorio_ponto.xlsx');
     }
 
     /**
@@ -102,6 +169,14 @@ class RelatorioPontoController extends Controller
 
         return CarbonPeriod::create($inicioPeriodo, $fimPeriodo);
     }
+    private function definirPeriodoMes($ano, $mes)
+    {
+        $inicioPeriodo = Carbon::create($ano, $mes, 1);
+        $fimPeriodo = Carbon::create($ano, $mes)->endOfMonth();
+
+        return CarbonPeriod::create($inicioPeriodo, $fimPeriodo);
+    }
+
 
     /**
      * Preenche dados de dias não úteis se necessário
