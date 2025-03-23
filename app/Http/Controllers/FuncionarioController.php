@@ -9,7 +9,6 @@ use App\Models\Cargo;
 use App\Models\DadosContrato;
 use App\Models\Funcionario;
 use App\Models\Unidade;
-use App\Models\Biometria;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -32,9 +31,17 @@ class FuncionarioController extends Controller
 
         $user = auth()->user();
 
+
         if (!$user->hasAnyRole(['admin', 'super admin'])) {
             $query->where('unidade_id', $user->unidade_id);
         }
+
+
+        $query->when(!$request->has('allStatus'), function ($q) {
+            $q->where('status', true);
+        })->when($request->has('allStatus') && $request->filled('status'), function ($q) use ($request) {
+            $q->where('status', filter_var($request->status, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE));
+        });
 
         $query->when($request->nome , function ($query, $nome) {
             $query->where('nome', 'like', "%$nome%");

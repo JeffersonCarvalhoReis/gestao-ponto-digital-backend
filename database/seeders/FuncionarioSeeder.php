@@ -19,6 +19,7 @@ class FuncionarioSeeder extends Seeder
                 $funcionario = Funcionario::create([
                     'nome' => $faker->name,
                     'data_nascimento' => $faker->date('Y-m-d', '-18 years'),
+                    'status' => $faker->boolean(85),
                     'cpf' => $cpf,
                     'cargo_id' => rand(1, 6),
                     'unidade_id' => $unidade,

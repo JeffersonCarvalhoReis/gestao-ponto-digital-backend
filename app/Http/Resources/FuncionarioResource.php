@@ -36,6 +36,7 @@ class FuncionarioResource extends JsonResource
             'unidade_id' => $this->unidade_id,
             'cargo_id' => $this->cargo_id,
             'biometria' => $this->biometria->id ?? null,
+            'status' => $this->status ?'Ativo' : 'Inativo',
         ];
     }
 }

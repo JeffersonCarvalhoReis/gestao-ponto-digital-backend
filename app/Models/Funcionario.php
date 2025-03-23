@@ -17,6 +17,7 @@ class Funcionario extends Model
         'foto',
         'cargo_id',
         'unidade_id',
+        'status'
     ];
 
     public function cargo()

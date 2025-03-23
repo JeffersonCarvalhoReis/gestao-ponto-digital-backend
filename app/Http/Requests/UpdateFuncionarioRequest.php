@@ -30,6 +30,7 @@ class UpdateFuncionarioRequest extends FormRequest
             'foto' => 'nullable|max:10240',
             'unidade_id' => 'sometimes|exists:unidades,id',
             'cargo_id' => 'sometimes|exists:cargos,id',
+            'status' => 'sometimes|boolean'
         ];
     }
 }

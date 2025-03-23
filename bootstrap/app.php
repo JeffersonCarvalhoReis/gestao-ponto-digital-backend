@@ -6,6 +6,7 @@ use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Session\TokenMismatchException;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 use Spatie\Permission\Middleware\RoleMiddleware;
@@ -81,6 +82,16 @@ return Application::configure(basePath: dirname(__DIR__))
                     return response()->json([
                         'message' => 'Este registro não pode ser excluído porque está relacionado a outros dados.'
                     ], 400);
+                }
+            }
+
+        });
+        $exceptions->render(function (Throwable $e) {
+            if ($e instanceof ConnectionException) {
+                if (str_contains($e->getMessage(), 'apiservice/identification')) {
+                    return response()->json([
+                        'message' => 'Não foi possível se conectar com o sistema do aparelho biométrico'
+                    ], 500);
                 }
             }
 
