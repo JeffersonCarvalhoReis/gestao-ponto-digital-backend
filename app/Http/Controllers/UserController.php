@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Role;
 
 class UserController extends Controller
@@ -28,9 +29,9 @@ class UserController extends Controller
         ->with('unidade')
         ->whereDoesntHave('roles', fn ($query) => $query->where('name', 'super admin'));
 
-        if($request->has('nome')) {
-            $nome = $request->input('nome');
-            $query->where('name', 'like', "%$nome%");
+        if($request->has('user')) {
+            $user = $request->input('user');
+            $query->where('name', 'like', "%$user%");
         }
 
         $perPage = $request->input('per_page', 10);
@@ -88,8 +89,7 @@ class UserController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users',
+            'user' => 'required|string|unique:users',
             'senha' => 'required|string|min:8',
             'funcao' => 'required|exists:roles,name',
             'unidade' => 'required|numeric|exists:unidades,id'
@@ -101,8 +101,7 @@ class UserController extends Controller
             return response()->json(['message' => 'Não autorizado a criar este tipo de usuário.'], 403);
         }
         $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
+            'user' => $request->user,
             'password' => Hash::make($request->input('senha')),
             'unidade_id' => (int)$request->input('unidade'),
 
@@ -138,16 +137,14 @@ class UserController extends Controller
         Gate::authorize('update', $userToUpdate);
 
         $request->validate([
-            'name' => 'sometimes|string|max:255',
-            'email' => 'sometimes|email|unique:users,email,' . $userToUpdate->id,
+            'user' => 'sometimes|string|unique:users,user,' . $userToUpdate->id,
             'senha' => 'sometimes|string|min:8',
             'funcao' => 'sometimes|exists:roles,name',
             'unidade' => 'sometimes|numeric|exists:unidades,id',
         ]);
 
         $data = [
-            'name' => $request->name,
-            'email' => $request->email,
+            'user' => $request->user,
             'unidade_id' => $request->unidade,
         ];
 
@@ -183,4 +180,64 @@ class UserController extends Controller
             'message' => 'Usuário excluído com sucesso.'
         ], 200);
     }
+
+    //metodos para o proprio usuario
+
+    public function profile(Request $request)
+    {
+        return response()->json($request->user()->user);
+    }
+
+    public function updateUser(Request $request)
+    {
+        $user = $request->user();
+
+        $request->validate([
+            'user' => 'sometimes|string|unique:users,user,' . $user->id,
+            'senha' => 'sometimes|string|min:3',
+            'novaSenha' => 'nullable|string|min:8',
+        ]);
+
+        if ($request->filled('novaSenha')) {
+            if(!$request->filled('senha')) {
+                throw ValidationException::withMessages([
+                    'senhaAtual' => 'Senha atual necessária para essa alteraçao.',
+                ]);
+            }
+            if (!Hash::check($request->senha, $user->password)) {
+                throw ValidationException::withMessages([
+                    'senhaAtual' => 'Senha atual incorreta.',
+                ]);
+            }
+            $data['password'] = Hash::make($request->novaSenha);
+        }
+
+        $data['user'] = $request->user;
+        $user->update($data);
+
+        return response()->json(['message' => 'Conta atualizada com sucesso']);
+    }
+
+    public function deleteUser(Request $request)
+    {
+        $request->validate([
+            'senha' => 'required|string',
+        ]);
+
+        $user = $request->user();
+
+        if (!Hash::check($request->senha, $user->password)) {
+            return response()->json(['message' => 'Senha incorreta.'], 403);
+        }
+
+        app(AuthController::class)->logout($request);
+
+        $user->delete();
+
+        // 🔹 Remover cookies no frontend
+        return response()->json(['message' => 'Conta excluída com sucesso'], 200)
+            ->withoutCookie('laravel_session')
+            ->withoutCookie('XSRF-TOKEN');
+    }
+
 }

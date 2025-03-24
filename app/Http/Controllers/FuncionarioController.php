@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\FuncionariosExport;
 use App\Http\Requests\StoreFuncionarioRequest;
 use App\Http\Requests\UpdateFuncionarioRequest;
 use App\Http\Resources\FuncionarioResource;
@@ -13,9 +14,11 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Log;
+use Maatwebsite\Excel\Facades\Excel;
 
 class FuncionarioController extends Controller
 {
+    private $funcionariosExport;
     public function __construct()
     {
         $this->middleware('permission:visualizar_funcionarios')->only(['index', 'show']);
@@ -25,17 +28,15 @@ class FuncionarioController extends Controller
 
 
     }
-    public function index(Request $request)
+    private function filtroFuncionarios(Request $request)
     {
         $query = Funcionario::with(['dadosContrato', 'unidade', 'cargo', 'biometria']);
 
         $user = auth()->user();
 
-
         if (!$user->hasAnyRole(['admin', 'super admin'])) {
             $query->where('unidade_id', $user->unidade_id);
         }
-
 
         $query->when(!$request->has('allStatus'), function ($q) {
             $q->where('status', true);
@@ -43,86 +44,92 @@ class FuncionarioController extends Controller
             $q->where('status', filter_var($request->status, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE));
         });
 
-        $query->when($request->nome , function ($query, $nome) {
+        $query->when($request->nome, function ($query, $nome) {
             $query->where('nome', 'like', "%$nome%");
         });
 
-        $query->when($request->vinculo, function ($query,$vinculo) {
-            $query->whereHas('dadosContrato', function($q) use ($vinculo){
+        $query->when($request->vinculo, function ($query, $vinculo) {
+            $query->whereHas('dadosContrato', function ($q) use ($vinculo) {
                 $q->where('vinculo', 'like', "%$vinculo%");
             });
-
         });
 
-        $query->when($request->unidade, function ($query, $unidade){
-
+        $query->when($request->unidade, function ($query, $unidade) {
             $query->whereHas('unidade', function ($q) use ($unidade) {
-                $q->where('id',  $unidade);
+                $q->where('id', $unidade);
             });
         });
 
-        $query->when($request->cargo, function ($query, $cargo){
+        $query->when($request->cargo, function ($query, $cargo) {
             $query->whereHas('cargo', function ($q) use ($cargo) {
-                $q->where('id',  $cargo);
+                $q->where('id', $cargo);
             });
-
         });
+
         $query->when($request->biometria, function ($query, $biometria) {
             if ($biometria === 'Pendente') {
-                $query->whereDoesntHave('biometria'); // Filtra funcionários SEM biometria
+                $query->whereDoesntHave('biometria');
             } elseif ($biometria === 'Cadastrado') {
-                $query->whereHas('biometria'); // Filtra funcionários COM biometria
+                $query->whereHas('biometria');
             }
         });
 
-        $perPage = $request->input('per_page', 10);
-        if($perPage == -1) {
-            $perPage = Funcionario::count();
-        }
-
         $sortBy = $request->sortBy;
-        $query->when( $request->order, function ($query, $order) use ($sortBy) {
+        $query->when($request->order, function ($query, $order) use ($sortBy) {
             switch ($sortBy) {
                 case 'unidade':
                     $query->whereHas('unidade')
-                    ->orderBy(
-                        Unidade::select('nome')
-                            ->whereColumn('unidades.id', 'funcionarios.unidade_id'),
-                        $order
-                    );
-                break;
+                        ->orderBy(
+                            Unidade::select('nome')
+                                ->whereColumn('unidades.id', 'funcionarios.unidade_id'),
+                            $order
+                        );
+                    break;
                 case 'cargo':
                     $query->whereHas('cargo')
-                    ->orderBy(
-                        Cargo::select('nome')
-                            ->whereColumn('cargos.id', 'funcionarios.cargo_id'),
-                        $order
-                    );
-                break;
-
+                        ->orderBy(
+                            Cargo::select('nome')
+                                ->whereColumn('cargos.id', 'funcionarios.cargo_id'),
+                            $order
+                        );
+                    break;
                 case 'vinculo':
                     $query->whereHas('dadosContrato')
-                    ->orderBy(
-                        DadosContrato::select('vinculo')
-                            ->whereColumn('dados_contratos.funcionario_id', 'funcionarios.id'),
-                        $order
-                    );
-                break;
+                        ->orderBy(
+                            DadosContrato::select('vinculo')
+                                ->whereColumn('dados_contratos.funcionario_id', 'funcionarios.id'),
+                            $order
+                        );
+                    break;
                 case 'biometria':
                     $query->selectRaw(
                         '*, (SELECT COUNT(*) FROM biometrias WHERE biometrias.funcionario_id = funcionarios.id) as has_biometria'
                     )->orderBy('has_biometria', $order);
-
-                break;
-
+                    break;
                 default:
-
-                $query->orderBy($sortBy, $order);
-                break;
+                    $query->orderBy($sortBy, $order);
+                    break;
             }
-
         });
-        $funcionariosPaginado = $query->paginate($perPage );
+
+        return $query;
+    }
+
+    public function exportarFuncionarios(Request $request) {
+        $funcionarios = $this->filtroFuncionarios($request)->get();
+        return Excel::download(new FuncionariosExport($funcionarios), 'funcionarios.xlsx');
+    }
+
+    public function index(Request $request)
+    {
+        $query = $this->filtroFuncionarios($request);
+
+        $perPage = $request->input('per_page', 10);
+        if ($perPage == -1) {
+            $perPage = $query->count();
+        }
+
+        $funcionariosPaginado = $query->paginate($perPage);
         $funcionarios = FuncionarioResource::collection($funcionariosPaginado);
 
         return response()->json([
@@ -135,6 +142,7 @@ class FuncionarioController extends Controller
             ],
         ], 200);
     }
+
 
     public function show($id)
     {

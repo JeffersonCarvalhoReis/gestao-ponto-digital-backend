@@ -21,6 +21,9 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::middleware(['auth:sanctum'])->group(function(){
 
     Route::get('user', [AuthController::class, 'user']);
+    Route::get('/usuario', [UserController::class, 'profile']);
+    Route::put('/usuario', [UserController::class, 'updateUser']);
+    Route::delete('/usuario', [UserController::class, 'deleteUser']);
     // Biometria
     Route::post('biometria/registrar/{funcionario}', [BiometriaController::class, 'capturarBiometria']);
     Route::delete('biometria/excluir/{id}', [BiometriaController::class, 'excluirBiometria']);
@@ -34,7 +37,6 @@ Route::middleware(['auth:sanctum'])->group(function(){
     Route::post('/logout', [AuthController::class, 'logout']);
 
     // Relatório de Pontos
-    //ainda falta implemnetar
     Route::post('relatorio', [RelatorioPontoController::class, 'gerarRelatorio']);
 
     //Recuros
@@ -47,6 +49,7 @@ Route::middleware(['auth:sanctum'])->group(function(){
     // Dados dos funcionarios
     Route::apiResource('/funcionarios',  FuncionarioController::class);
     Route::get('/funcionarios/verificar-cpf/{cpf}',  [FuncionarioController::class, 'verificaCPF']);
+    Route::post('/funcionarios/exportar',  [FuncionarioController::class, 'exportarFuncionarios']);
     Route::delete('/funcionarios/apagar-foto/{id}',  [FuncionarioController::class, 'apagarFoto']);
     Route::post('dados-contratos', [DadosContratoController::class, 'store']);
     Route::put('dados-contratos/{id}', [DadosContratoController::class, 'update']);

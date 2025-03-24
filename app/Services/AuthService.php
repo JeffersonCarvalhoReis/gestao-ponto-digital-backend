@@ -15,12 +15,10 @@ class AuthService
 {
     public function authenticate(array $credentials, Request $request): UserResource
     {
-        // Determina se o login é por email ou nome
-        $field = filter_var($credentials['login'], FILTER_VALIDATE_EMAIL) ? 'email' : 'name';
 
         // Modifica as credenciais para incluir o campo correto
         $authCredentials = [
-            $field => $credentials['login'],
+            'user' => $credentials['login'],
             'password' => $credentials['password'],
         ];
 
