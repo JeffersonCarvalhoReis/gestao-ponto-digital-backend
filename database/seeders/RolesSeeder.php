@@ -107,6 +107,7 @@ class RolesSeeder extends Seeder
             'visualizar_ponto',
             'registrar_justificativas',
             'registrar_justificativas',
+            'visualizar_funcionarios',
             'excluir_justificativas',
             'editar_justificativas',
             'visualizar_justificativas',

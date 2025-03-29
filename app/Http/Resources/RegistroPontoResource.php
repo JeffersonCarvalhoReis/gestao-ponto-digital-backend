@@ -15,6 +15,7 @@ class RegistroPontoResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
+            'id' => $this->id,
             'data' => $this->data_local,
             'hora_entrada' => $this->hora_entrada,
             'hora_saida' => $this->hora_saida,

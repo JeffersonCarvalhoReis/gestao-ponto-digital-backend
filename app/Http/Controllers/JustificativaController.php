@@ -67,7 +67,7 @@ class JustificativaController extends Controller
             $query->where('funcionarios.nome', 'like', "%$nome%");
         });
         $query->when($request->status, function ($query, $status) {
-            $query->where('status', $status);
+            $query->where('justificativas.status', $status);
         });
 
         // Filtro por unidade

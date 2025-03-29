@@ -153,6 +153,7 @@ return [
     'attributes' => [
         'funcionario_id' => 'funcionário',
         'data_fim' => 'data final',
-        'data_inicio' => 'data de início'
+        'data_inicio' => 'data de início',
+        'user' => 'Usuário'
     ],
 ];

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\NovoRegistroPonto;
 use App\Http\Controllers\BiometriaController;
 use App\Http\Resources\RegistroPontoResource;
 use App\Models\Funcionario;
@@ -49,6 +50,7 @@ class RegistroPontoController extends Controller
 
         if ($horaEntrada->isToday()) {
             $registroAberto->update(['hora_saida' => Carbon::now()]);
+            broadcast(new NovoRegistroPonto($registroAberto))->toOthers();
             return response()->json([
                 'message' => 'Hora de saída registrada com sucesso!',
                  'registro' => $registroAberto
@@ -61,6 +63,8 @@ class RegistroPontoController extends Controller
             'hora_entrada' => Carbon::now(),
             'biometrico' => (bool)$biometria,
         ]);
+
+        broadcast(new NovoRegistroPonto($novoRegistro))->toOthers();
 
         return response()->json([
             'message' => 'Hora de entrada registrada com sucesso!',
