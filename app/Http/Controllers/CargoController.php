@@ -30,6 +30,9 @@ class CargoController extends Controller
         if($perPage == -1) {
             $perPage = Cargo::count();
         }
+        if(!$request->order) {
+            $query->orderBy('updated_at', 'desc');
+        }
 
         $order = $request->order;
         $query->when( $request->sortBy, function ($query, $sortBy) use ($order){
@@ -56,7 +59,7 @@ class CargoController extends Controller
     public function store(Request $request)
     {
       $data = $request->validate([
-                'nome' => 'required|min:2'
+                'nome' => 'required|string|unique:cargos|min:2'
         ]);
 
        Cargo::create($data);

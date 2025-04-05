@@ -7,21 +7,24 @@ use Illuminate\Support\Facades\Broadcast;
 | Broadcast Channels
 |--------------------------------------------------------------------------
 */
+// Broadcast::routes(['middleware' => ['web', 'auth:sanctum']]);
+
 
 // Admin channel - only accessible to admin users
-Broadcast::channel('admin.notifications', function ($user) {
-    return $user->hasAnyRole(['admin', 'super admin']);
-});
-Broadcast::channel('admin.registros-ponto', function ($user) {
-    return $user->hasAnyRole(['admin', 'super admin']);
-});
+// Broadcast::channel('notifications.{userId}', function ($user) {
+//     return $user->hasAnyRole(['admin', 'super admin']);
+// });
+
+
+// Broadcast::channel('admin.registros-ponto', function ($user) {
+//     if ($user->hasRole('super admin')) {
+//         return true;
+//     }
+//     return $user->setor_id === request()->setor_id;
+// });
 
 // Unit-specific channel - accessible to users in that unit
-Broadcast::channel('unidade.{unidadeId}', function ($user, $unidadeId) {
-    return (int) $user->unidade_id === (int) $unidadeId;
-});
+// Broadcast::channel('unidade.{userId}', function ($user) {
+//     return $user->hasAnyRole(['user', 'gestor']);
+// });
 
-// User-specific channel for private notifications
-Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
-    return (int) $user->id === (int) $id;
-});

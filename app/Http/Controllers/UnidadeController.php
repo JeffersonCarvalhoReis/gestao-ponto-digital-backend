@@ -6,6 +6,7 @@ use App\Http\Resources\UnidadeResource;
 use App\Models\Localidade;
 use App\Models\Unidade;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 class UnidadeController extends Controller
 {
@@ -24,9 +25,20 @@ class UnidadeController extends Controller
     {
         $query = Unidade::query()->with('localidade');
 
-        $query->when($request->nome, function ( $query, $nome ) {
-            $query->where('nome','like', "%$nome%");
+        $user = auth()->user();
+
+        $query->when($request->nome, function ($query, $nome) {
+            $query->where('nome', 'like', "%$nome%");
+        })
+        ->when($user->hasRole('superadmin'), function ($query) {
+            return $query;
+        })
+        ->when($user->hasRole('admin'), function ($query) use ($user) {
+            $query->whereHas('localidade', function ($query) use ($user) {
+                $query->where('setor_id', $user->setor_id);
+            });
         });
+
         $query->when($request->id, function ( $query, $id ) {
             $query->where('id', $id);
         });
@@ -34,6 +46,10 @@ class UnidadeController extends Controller
         $perPage = $request->input('per_page', 10);
         if($perPage == -1) {
             $perPage = Unidade::count();
+        }
+        if(!$request->order) {
+
+            $query->orderBy('updated_at', 'desc');
         }
 
         $sortBy = $request->sortBy;
@@ -88,6 +104,8 @@ class UnidadeController extends Controller
     public function show(string $id)
     {
             $unidade = Unidade::findOrFail($id);
+            Gate::authorize('show', $unidade);
+
             $unidade = new UnidadeResource($unidade);
             return response()->json($unidade, 200);
 
@@ -105,6 +123,8 @@ class UnidadeController extends Controller
                 'cnes' => 'nullable|numeric|unique:unidades,cnes,'.$id,
             ]);
 
+            Gate::authorize('update', $unidade);
+
             $unidade->update($data);
             $unidade = new UnidadeResource($unidade);
 
@@ -121,6 +141,8 @@ class UnidadeController extends Controller
     {
 
             $unidade = Unidade::findOrFail($id);
+            Gate::authorize('delete', $unidade);
+
             $unidade->delete();
 
             return response()->json([

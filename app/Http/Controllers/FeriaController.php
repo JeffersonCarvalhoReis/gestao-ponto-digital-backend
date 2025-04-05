@@ -20,6 +20,7 @@ class FeriaController extends Controller
      */
     public function index(Request $request)
     {
+        $user = auth()->user();
         // Inicia a query a partir do modelo Feria
         $query = Feria::query();
 
@@ -38,6 +39,14 @@ class FeriaController extends Controller
             unidades.nome as unidade,
             COUNT(*) as total_dias
         ');
+
+
+        if (!$user->hasRole('super admin')) {
+            $query->whereHas('funcionario.unidade.localidade', function ($query) use ($user) {
+                $query->where('setor_id', $user->setor_id);
+            });
+        }
+
 
         $query->when($request->status, function( $query, $status ) {
             $hoje = now()->toDateString();
@@ -67,9 +76,13 @@ class FeriaController extends Controller
             'ferias.data_fim',
             'ferias.descricao',
             'funcionarios.nome',
-            'unidades.nome'
+            'unidades.nome',
+            'ferias.updated_at'
         );
 
+        if(!$request->order) {
+            $query->orderBy('ferias.updated_at', 'desc');
+        }
         // Ordenação: permite ordenar pelos campos 'funcionario', 'unidade', 'data_inicio' ou 'data_fim'
         $order = $request->input('order', 'asc');
         if ($request->filled('sortBy')) {
@@ -159,7 +172,7 @@ class FeriaController extends Controller
         Feria::insert(collect($datas)->toArray());
 
         return response()->json([
-            'message' => 'Férias adicionadas com sucesso!',
+            'message' => 'Licença/Férias adicionadas com sucesso!',
         ], 201);
     }
        /**
@@ -181,7 +194,7 @@ class FeriaController extends Controller
             ->delete();
 
             return response()->json([
-                'message' => 'Férias removidas com sucesso!',
+                'message' => 'Licença/Férias removidas com sucesso!',
                 'registro_apagados' => $totalApagado
                 ], 200);
     }

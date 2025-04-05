@@ -5,7 +5,7 @@ namespace App\Http\Resources;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-class CargoResource extends JsonResource
+class SetorResource extends JsonResource
 {
     /**
      * Transform the resource into an array.
@@ -15,9 +15,9 @@ class CargoResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id'        => $this->id,
-            'nome'      => $this->nome,
-            'deletavel' => $this->funcionarios()->where('status', 1)->count() == 0
+            'id' => $this->id,
+            'nome' => $this->nome,
+            'deletavel' => $this->users()->count() === 0 && $this->localidades()->count() === 0
         ];
     }
 }

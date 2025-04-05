@@ -29,10 +29,6 @@ class PermissionsSeeder extends Seeder
             'visualizar',
             'excluir',
         ],
-        'dados_contratos' => [
-            'registrar',
-            'editar',
-        ],
         'digitais' => [
             'registrar',
             'excluir',
@@ -88,6 +84,9 @@ class PermissionsSeeder extends Seeder
         'biometria' => [
             'registrar',
         ],
+        'setor' => [
+            'gerenciar'
+        ]
     ];
 
         foreach ($permissions as $module => $actions)

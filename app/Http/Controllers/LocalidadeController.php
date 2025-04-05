@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Resources\LocalidadeResource;
 use App\Models\Localidade;
+use Illuminate\Validation\Rule;
 use Illuminate\Http\Request;
 
 class LocalidadeController extends Controller
@@ -21,6 +22,13 @@ class LocalidadeController extends Controller
     public function index(Request $request)
     {
         $query = Localidade::query();
+
+        $user = auth()->user();
+
+        if ($user->hasRole('admin')) {
+            $query->where('setor_id', $user->setor_id)->get();
+        }
+
         $query->when($request->nome, function ($query, $nome){
 
             $query->where('nome','like', "%$nome%");
@@ -30,6 +38,11 @@ class LocalidadeController extends Controller
         if($perPage == -1) {
             $perPage = Localidade::count();
         }
+
+        if(!$request->order) {
+            $query->orderBy('updated_at', 'desc');
+        }
+
         $order = $request->order;
         $query->when( $request->sortBy, function ($query, $sortBy) use ($order){
             $query->orderBy($sortBy, $order);
@@ -55,11 +68,24 @@ class LocalidadeController extends Controller
      */
     public function store(Request $request)
     {
-      $data = $request->validate([
-                'nome' => 'required|min:2|unique:localidades,nome'
+        $user = auth()->user();
+
+        if ($user->hasRole('admin')) {
+            $request->merge(['setor_id' => $user->setor_id]);
+        }
+
+        $data = $request->validate([
+            'nome' => [
+                'required',
+                'min:2',
+                Rule::unique('localidades', 'nome')->where(function ($query) use ($request) {
+                    return $query->where('setor_id', $request->setor_id);
+                }),
+            ],
+            'setor_id' => 'required|exists:setores,id'
         ]);
 
-       Localidade::create($data);
+        Localidade::create($data);
 
         return response()->json([
             'message' => 'Localidade criada com sucesso.'
@@ -71,7 +97,17 @@ class LocalidadeController extends Controller
      */
     public function show(string $id)
     {
-        $localidade = Localidade::findOrFail($id);
+        $query = Localidade::query();
+        $query->findOrFail($id);
+
+        $user = auth()->user();
+
+        if ($user->hasRole('admin')) {
+            $query->where('setor_id', $user->setor_id);
+        }
+
+        $localidade = $query->get();
+
         $localidade = new LocalidadeResource($localidade);
         return response()->json($localidade, 200);
 
@@ -82,11 +118,29 @@ class LocalidadeController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        $localidade = Localidade::findOrFail($id);
+        $user = auth()->user();
 
         $data = $request->validate([
-            'nome' => 'required|min:2'
+            'nome' => [
+                'sometimes',
+                'min:2',
+                Rule::unique('localidades', 'nome')->where(function ($query) use ($user) {
+                    return $query->where('setor_id', $user->setor_id);
+                })->ignore($id),
+            ],
+            'setor_id' => 'sometimes|exists:setores,id'
         ]);
+
+        $query = Localidade::query();
+        $query->where('id',$id);
+
+        $user = auth()->user();
+
+        if ($user->hasRole('admin')) {
+            $query->where('setor_id', $user->setor_id);
+        }
+
+        $localidade = $query->first();
 
         $localidade->update($data);
         $localidade = new LocalidadeResource($localidade);
@@ -102,7 +156,16 @@ class LocalidadeController extends Controller
      */
     public function destroy(string $id)
     {
-        $localidade = Localidade::findOrFail($id);
+        $query = Localidade::query();
+        $query->where('id',$id);
+
+        $user = auth()->user();
+
+        if ($user->hasRole('admin')) {
+            $query->where('setor_id', $user->setor_id);
+        }
+
+        $localidade = $query->first();
         $localidade->delete();
 
         return response()->json([

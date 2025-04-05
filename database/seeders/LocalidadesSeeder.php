@@ -14,22 +14,32 @@ class LocalidadesSeeder extends Seeder
     public function run(): void
     {
         Localidade::create([
-            'nome' => 'Sede'
+            'nome' => 'Sede',
+            'setor_id' => 1
         ]);
         Localidade::create([
-            'nome' => 'Barreiros'
+            'nome' => 'Sede',
+            'setor_id' => 2
         ]);
         Localidade::create([
-            'nome' => 'Rio Verde'
+            'nome' => 'Barreiros',
+            'setor_id' => 1
         ]);
         Localidade::create([
-            'nome' => 'Almas'
+            'nome' => 'Rio Verde',
+            'setor_id' => 1
         ]);
         Localidade::create([
-            'nome' => 'Lages'
+            'nome' => 'Almas',
+            'setor_id' => 1
         ]);
         Localidade::create([
-            'nome' => 'Maravilha'
+            'nome' => 'Lages',
+            'setor_id' => 1
+        ]);
+        Localidade::create([
+            'nome' => 'Maravilha',
+            'setor_id' => 1
         ]);
     }
     }

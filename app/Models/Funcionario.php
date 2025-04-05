@@ -10,6 +10,7 @@ class Funcionario extends Model
     /** @use HasFactory<\Database\Factories\FuncionarioFactory> */
     use HasFactory;
 
+
     protected $fillable = [
         'nome',
         'data_nascimento',

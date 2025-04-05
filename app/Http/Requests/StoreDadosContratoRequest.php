@@ -23,10 +23,10 @@ class StoreDadosContratoRequest extends FormRequest
     {
         return [
             'vinculo' => 'required|string|max:50',
-            'carga_horaria' => 'required|integer|min:1',
+            'carga_horaria' => 'nullable|integer|min:1',
             'data_admissao' => 'required|date',
-            'salario_base' => 'required|numeric|min:0',
-            'funcionario_id' => 'required|exists:funcionarios,id'
+            'salario_base' => 'nullable|numeric|min:0',
+            'funcionario_id' => 'nullable|exists:funcionarios,id'
         ];
     }
 }

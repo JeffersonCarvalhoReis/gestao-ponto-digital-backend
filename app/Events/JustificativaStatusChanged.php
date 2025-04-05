@@ -15,16 +15,18 @@ class JustificativaStatusChanged implements ShouldBroadcast
 
     public $justificativa;
     public $status;
-    public $unidadeId;
+    public $userId;
+    public $notificacaoId;
 
     /**
      * Create a new event instance.
      */
-    public function __construct(Justificativa $justificativa, string $status)
+    public function __construct(Justificativa $justificativa, string $status, string $notificacaoId, string $userId )
     {
         $this->justificativa = $justificativa;
+        $this->notificacaoId = $notificacaoId;
         $this->status = $status;
-        $this->unidadeId = $justificativa->funcionario->unidade_id;
+        $this->userId = $userId;
     }
 
     /**
@@ -35,7 +37,7 @@ class JustificativaStatusChanged implements ShouldBroadcast
     public function broadcastOn(): array
     {
         return [
-            new Channel('unidade.' . $this->unidadeId),
+            new Channel('unidade.' . $this->userId),
         ];
     }
     /**
@@ -52,7 +54,8 @@ class JustificativaStatusChanged implements ShouldBroadcast
     public function broadcastWith(): array
     {
         return [
-            'id' => $this->justificativa->id,
+            'id' => $this->notificacaoId,
+            'justificativa_id' => $this->justificativa->id,
             'status' => $this->status,
             'funcionario' => $this->justificativa->funcionario->nome,
             'motivo' => $this->justificativa->motivo,

@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('nome');
             $table->date('data_nascimento');
             $table->boolean('status')->default(true);
-            $table->string('cpf')->unique();
+            $table->string('cpf');
             $table->string('foto')->nullable();
             $table->foreignId('cargo_id')->nullable()->constrained()->onDelete('set null');
             $table->foreignId('unidade_id')->constrained()->onDelete('cascade');

@@ -44,13 +44,16 @@ class RegistroPontoController extends Controller
     $registroAberto = RegistroPonto::where('funcionario_id', $funcionarioId)
         ->whereNull('hora_saida')
         ->orderBy('data_local', 'desc')->first();
+    $funcionario = Funcionario::find($funcionarioId);
+    $setorId = $funcionario->unidade->localidade->setor_id;
+
     if ($registroAberto) {
 
         $horaEntrada = Carbon::parse($registroAberto->data_local);
 
         if ($horaEntrada->isToday()) {
             $registroAberto->update(['hora_saida' => Carbon::now()]);
-            broadcast(new NovoRegistroPonto($registroAberto))->toOthers();
+            broadcast(new NovoRegistroPonto($registroAberto, $setorId))->toOthers();
             return response()->json([
                 'message' => 'Hora de saída registrada com sucesso!',
                  'registro' => $registroAberto
@@ -64,7 +67,7 @@ class RegistroPontoController extends Controller
             'biometrico' => (bool)$biometria,
         ]);
 
-        broadcast(new NovoRegistroPonto($novoRegistro))->toOthers();
+        broadcast(new NovoRegistroPonto($novoRegistro, $setorId ))->toOthers();
 
         return response()->json([
             'message' => 'Hora de entrada registrada com sucesso!',
@@ -81,6 +84,15 @@ class RegistroPontoController extends Controller
     if (!$user->hasAnyRole(['admin', 'super admin'])) {
         $query->whereHas('funcionario', function ($q) use ($user) {
             $q->where('unidade_id', $user->unidade_id);
+        });
+    }
+    if ($user->hasAnyRole( 'admin')) {
+        $query->whereHas('funcionario', function ($q) use ($user) {
+            $q->whereHas('unidade', function($q2) use ($user) {
+                $q2->whereHas('localidade', function($q3) use ($user) {
+                    $q3->where('setor_id', $user->setor_id);
+                });
+            });
         });
     }
 

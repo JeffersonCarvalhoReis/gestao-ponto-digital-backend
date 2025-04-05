@@ -16,7 +16,6 @@ use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Log;
 use Maatwebsite\Excel\Facades\Excel;
 
 class RelatorioPontoController extends Controller
@@ -107,7 +106,6 @@ class RelatorioPontoController extends Controller
         $unidadeId = $request->unidade;
         $mes = $request->mes;
         $ano = $request->ano;
-
         // Obtém funcionários com base nas permissões do usuário
         $funcionarios = $this->obterFuncionarios($unidadeId);
 
@@ -196,7 +194,7 @@ class RelatorioPontoController extends Controller
         $fimPeriodo = $periodo->getEndDate();
 
         return [
-            'diasNaoUteis' => $this->obterDiasNaoUteis($inicioPeriodo, $fimPeriodo),
+            'diasNaoUteis' => $this->obterDiasNaoUteis($inicioPeriodo, $fimPeriodo, $unidadeId),
             'ferias' => $this->obterFerias($inicioPeriodo, $fimPeriodo),
             'recessos' => $this->obterRecessos($unidadeId, $inicioPeriodo, $fimPeriodo),
             'justificativas' => $this->obterJustificativas($inicioPeriodo, $fimPeriodo),
@@ -207,9 +205,13 @@ class RelatorioPontoController extends Controller
     /**
      * Obtém dias não úteis no período
      */
-    private function obterDiasNaoUteis($inicioPeriodo, $fimPeriodo)
+    private function obterDiasNaoUteis($inicioPeriodo, $fimPeriodo, $unidadeId)
     {
-        return DiaNaoUtil::whereBetween('data', [$inicioPeriodo, $fimPeriodo])->get();
+        $unidade = Unidade::with('localidade')->where('id', $unidadeId)->first();
+
+        $unidadeSetorId = $unidade->localidade->setor_id;
+
+        return DiaNaoUtil::where('setor_id', $unidadeSetorId)->whereBetween('data', [$inicioPeriodo, $fimPeriodo])->get();
     }
 
     /**
@@ -225,9 +227,13 @@ class RelatorioPontoController extends Controller
      */
     private function obterRecessos($unidadeId, $inicioPeriodo, $fimPeriodo)
     {
-        return Recesso::where(function($query) use ($unidadeId) {
+        $unidade = Unidade::with('localidade')->where('id', $unidadeId)->first();
+
+        $unidadeSetorId = $unidade->localidade->setor_id;
+
+        return Recesso::where(function($query) use ($unidadeId, $unidadeSetorId) {
             $query->where('unidade_id', $unidadeId)
-                  ->orWhereNull('unidade_id');
+                    ->orWhere('setor_id', $unidadeSetorId);
         })->whereBetween('data', [$inicioPeriodo, $fimPeriodo])->get();
     }
 

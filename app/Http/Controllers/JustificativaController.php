@@ -6,7 +6,6 @@ use App\Events\JustificativaCriada;
 use App\Events\JustificativaStatusChanged;
 use App\Models\User;
 use App\Notifications\JustificativaNotification;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use App\Http\Resources\JustificativaListResource;
 use App\Http\Resources\JustificativaResource;
@@ -37,6 +36,7 @@ class JustificativaController extends Controller
 
         ->join('funcionarios', 'justificativas.funcionario_id', '=', 'funcionarios.id')
         ->join('unidades', 'funcionarios.unidade_id', '=', 'unidades.id')
+        ->join('localidades', 'unidades.localidade_id', '=', 'localidades.id')
         ->selectRaw('
             MIN(justificativas.id) as id,
             justificativas.funcionario_id,
@@ -47,7 +47,8 @@ class JustificativaController extends Controller
             justificativas.data_inicio,
             justificativas.data_fim,
             funcionarios.nome as funcionario,
-            unidades.nome as unidade
+            unidades.nome as unidade,
+            localidades.setor_id as setor_it
         ')
         ->groupBy(
             'justificativas.funcionario_id',
@@ -56,8 +57,12 @@ class JustificativaController extends Controller
             'justificativas.data_inicio',
             'justificativas.data_fim',
             'justificativas.motivo',
-            'justificativas.status'
+            'justificativas.status',
+            'justificativas.updated_at'
         );
+
+        $query->where('setor_id', $user->setor_id);
+
         if (!$user->hasAnyRole(['admin', 'super admin'])) {
             $query->where('funcionarios.unidade_id', $user->unidade_id);
         }
@@ -74,7 +79,10 @@ class JustificativaController extends Controller
         $query->when($request->unidade, function ($query, $unidade){
             $query->where('unidades.id', $unidade);
         });
+        if(!$request->order) {
 
+            $query->orderBy('justificativas.updated_at', 'desc');
+        }
         // Ordenação
         $order = $request->input('order', 'asc');
         if ($request->filled('sortBy')) {
@@ -165,21 +173,31 @@ class JustificativaController extends Controller
         ->whereDate('data_fim', $dataFim)
         ->first();
 
-        event(new JustificativaCriada($justificativa));
 
-        $adminUsers = User::role(['admin', 'super admin'])->get();
         $funcionario = Funcionario::find($validated['funcionario_id']);
-
-        Notification::send($adminUsers, new JustificativaNotification(
+        $setorFuncionario  = $funcionario->unidade->localidade->setor_id;
+        $adminUsers = User::role(['admin'])->where('setor_id', $setorFuncionario)->get();
+        $notificacao = new JustificativaNotification(
             $justificativa,
             'Nova Justificativa',
             "O funcionário {$funcionario->nome} enviou uma nova justificativa.",
             'pendente',
             'mdi-file-document'
+        );
 
+        foreach ($adminUsers as $admin) {
+            // Envia a notificação individualmente
+            $admin->notify($notificacao);
 
-        ));
+            // Recupera a notificação recém-criada para o usuário
+            $notificationData = $admin->notifications()
+                ->where('data->justificativa_id', $justificativa->id)
+                ->latest()
+                ->first();
 
+            // Dispara o evento para o admin com o ID da notificação
+            broadcast(new JustificativaCriada($justificativa, $notificationData->id, $admin))->toOthers();
+        }
         return response()->json([
             'message' => 'Justificativa criada com sucesso',
         ], 201);
@@ -268,10 +286,7 @@ class JustificativaController extends Controller
         if (isset($validated['status']) && in_array($validated['status'], ['aprovado', 'recusado'])) {
             $justificativa = Justificativa::with('funcionario')->findOrFail($id);
 
-            // Broadcast status change
-            event(new JustificativaStatusChanged($justificativa, $validated['status']));
 
-            // Get users from the same unit who are not admins
             $unidadeId = $justificativa->funcionario->unidade_id;
             $usersInUnit = User::where('unidade_id', $unidadeId)
                 ->whereDoesntHave('roles', function($query) {
@@ -281,14 +296,28 @@ class JustificativaController extends Controller
             $statusText = $validated['status'] === 'aprovado' ? 'aprovada' : 'recusada';
             $icon = $validated['status'] === 'aprovado' ? 'mdi-check-circle' : 'mdi-close-circle';
 
-            // Send notification to users in the same unit
-            Notification::send($usersInUnit, new JustificativaNotification(
+            $notificacao = new JustificativaNotification(
                 $justificativa,
                 "Justificativa {$statusText}",
                 "A justificativa de {$justificativa->funcionario->nome} foi {$statusText}.",
                 $validated['status'],
                 $icon
-            ));
+            );
+
+            foreach ($usersInUnit as $user) {
+                // Envia a notificação individualmente
+                $user->notify($notificacao);
+                $notificationData = $user->notifications()
+                    ->where('data->justificativa_id', $justificativa->id)
+                    ->latest()
+                    ->first();
+                broadcast(new JustificativaStatusChanged(
+                    $justificativa,
+                    $validated['status'],
+                    $notificationData->id,
+                    $user->id
+                ))->toOthers();
+            }
         }
 
 

@@ -11,13 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('dados_contratos', function (Blueprint $table) {
+        Schema::create('setores', function (Blueprint $table) {
             $table->id();
-            $table->string('vinculo');
-            $table->integer('carga_horaria')->nullable();
-            $table->date('data_admissao');
-            $table->decimal('salario_base', 10, 2)->nullable();
-            $table->foreignId('funcionario_id')->constrained()->onDelete('cascade');
+            $table->string('nome');
             $table->timestamps();
         });
     }
@@ -27,6 +23,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('dados_contratos');
+        Schema::dropIfExists('setores');
     }
 };

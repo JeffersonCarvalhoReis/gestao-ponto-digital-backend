@@ -26,25 +26,18 @@ class DiaNaoUtilController extends Controller
      */
     public function index()
     {
-        $anoAtual = Carbon::now()->year;
+        $user = auth()->user();
 
-        $feriadosExistentes = DiaNaoUtil::where('tipo', 'feriado')
-            ->whereYear('created_at', $anoAtual)
-            ->exists();
+        $this->verificaEpreencheDiasNaoUteis($user);
 
-        if (!$feriadosExistentes) {
-            $this->preencherFeriados();
+        $query = DiaNaoUtil::query();
+
+        if(!$user->hasRole('super admin')) {
+            $query->where('setor_id', $user->setor_id);
         }
+        $diasNaoUteis = $query->get();
 
-        $finaisDeSemanaExistentes = DiaNaoUtil::where('tipo', 'final_de_semana')
-            ->whereYear('created_at', $anoAtual)
-            ->exists();
-
-        if (!$finaisDeSemanaExistentes) {
-            $this->preencherFinaisDeSemana();
-        }
-
-        return DiaNaoUtil::all();
+        return $diasNaoUteis;
     }
 
 
@@ -53,6 +46,8 @@ class DiaNaoUtilController extends Controller
      */
     public function store(Request $request)
     {
+        $user = auth()->user();
+
         $validated = $request->validate([
             'data_inicio' => 'required|date',
             'data_fim' => 'nullable|after_or_equal:data_inicio|date',
@@ -65,11 +60,12 @@ class DiaNaoUtilController extends Controller
         $dataFim = isset($validated['data_fim']) ? Carbon::create($validated['data_fim']) : $dataInicio;
 
 
-        $datas = $dataInicio->daysUntil($dataFim)->map(function($data) use ($validated){
+        $datas = $dataInicio->daysUntil($dataFim)->map(function($data) use ($validated, $user){
             return [
                 'data' => $data->toDateString(),
                 'tipo' => $validated['tipo'],
                 'descricao' => $validated['descricao'] ?? null,
+                'setor_id' => $user->setor_id,
                 'created_at' => now(),
                 'updated_at' => now(),
             ];
@@ -82,7 +78,7 @@ class DiaNaoUtilController extends Controller
         );
 
         return response()->json([
-            'message' => 'Dias não úteis adicionados com sucesso!',
+            'message' => 'Dias sem expediente adicionados com sucesso!',
         ], 201);
     }
 
@@ -112,7 +108,7 @@ class DiaNaoUtilController extends Controller
         );
 
         return response()->json([
-            'message' => 'Dia não útil atualizado com sucesso',
+            'message' => 'Dia sem expediente atualizado com sucesso',
             'data' => $diaNaoUtil
         ], 200);
     }
@@ -126,7 +122,7 @@ class DiaNaoUtilController extends Controller
         $diaNaoUtil->delete();
 
         return response()->json([
-            'message' => 'Dia não útil removido com sucesso'
+            'message' => 'Dia sem expediente removido com sucesso'
         ], 200);
     }
 
@@ -149,17 +145,23 @@ class DiaNaoUtilController extends Controller
             return response()->json(['message' => $e->getMessage()], 500);
         }
     }
-    public function proximosFeriados() {
+    public function proximosFeriados()
+    {
+        $user = auth()->user();
+
+        $this->verificaEpreencheDiasNaoUteis($user);
 
         $hoje = Carbon::now()->format('Y-m-d');
         $proximosDias = Carbon::now()->addDays(30)->format('Y-m-d');
 
         $query = Recesso::query();
 
-        $user = auth()->user();
 
         if (!$user->hasAnyRole(['admin', 'super admin'])) {
             $query->where('unidade_id', $user->unidade_id)->orWhere('unidade_id', null);
+        }
+        if (!$user->hasAnyRole('super admin')) {
+            $query->where('setor_id', $user->setor_id);
         }
 
         $feriados = DiaNaoUtil::where('tipo', 'feriado')->whereBetween('data', [$hoje, $proximosDias])
@@ -177,5 +179,29 @@ class DiaNaoUtilController extends Controller
         return response()->json([
             'proximos_feriados' => $feriadosRecessos,
         ], 200);
+    }
+
+    public function verificaEpreencheDiasNaoUteis($user)
+    {
+
+        $anoAtual = Carbon::now()->year;
+
+        $feriadosExistentes = DiaNaoUtil::where('tipo', 'feriado')
+            ->whereYear('created_at', $anoAtual)
+            ->where('setor_id', $user->setor_id)
+            ->exists();
+
+        if (!$feriadosExistentes) {
+            $this->preencherFeriados();
+        }
+
+        $finaisDeSemanaExistentes = DiaNaoUtil::where('tipo', 'final_de_semana')
+            ->whereYear('created_at', $anoAtual)
+            ->where('setor_id', $user->setor_id)
+            ->exists();
+
+        if (!$finaisDeSemanaExistentes) {
+            $this->preencherFinaisDeSemana();
+        }
     }
 }

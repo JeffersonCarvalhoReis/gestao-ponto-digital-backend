@@ -15,7 +15,7 @@ class UnidadesSeeder extends Seeder
     {
         Unidade::create([
             'nome' => 'Hospital Municipal Amélia de Carvalho',
-            'localidade_id' => 1,
+            'localidade_id' => 2,
             'cnes' => null
         ]);
         Unidade::create([
@@ -40,17 +40,17 @@ class UnidadesSeeder extends Seeder
         ]);
         Unidade::create([
             'nome' => 'EAP Maravilha',
-            'localidade_id' => 5,
+            'localidade_id' => 7,
             'cnes' => null
         ]);
         Unidade::create([
             'nome' => 'PSF Manoel Nogueira dos Santos Filho Badéu',
-            'localidade_id' => 2,
+            'localidade_id' => 3,
             'cnes' => null
         ]);
         Unidade::create([
             'nome' => 'UBSF Antônio Felicidade',
-            'localidade_id' => 3,
+            'localidade_id' => 4,
             'cnes' => null
         ]);
         Unidade::create([
@@ -60,12 +60,12 @@ class UnidadesSeeder extends Seeder
         ]);
         Unidade::create([
             'nome' => 'UBSF Almas',
-            'localidade_id' => 4,
+            'localidade_id' => 5,
             'cnes' => null
         ]);
         Unidade::create([
             'nome' => 'UBSF Lages',
-            'localidade_id' => 5,
+            'localidade_id' => 6,
             'cnes' => null
         ]);
     }

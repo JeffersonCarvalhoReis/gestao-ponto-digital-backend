@@ -17,6 +17,7 @@ class LocalidadeResource extends JsonResource
         return [
             'id' => $this->id,
             'nome' => $this->nome,
+            'setor' => $this->setor_id,
             'deletavel' => $this->unidades()->count() === 0
         ];
     }

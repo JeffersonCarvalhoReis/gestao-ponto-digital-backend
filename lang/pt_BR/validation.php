@@ -154,6 +154,7 @@ return [
         'funcionario_id' => 'funcionário',
         'data_fim' => 'data final',
         'data_inicio' => 'data de início',
-        'user' => 'Usuário'
+        'user' => 'Usuário',
+        'setor_id' => 'Setor'
     ],
 ];

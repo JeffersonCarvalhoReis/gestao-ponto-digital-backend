@@ -24,11 +24,16 @@ class User extends Authenticatable
         'user',
         'password',
         'unidade_id',
+        'setor_id'
     ];
 
     public function unidade()
     {
         return $this->belongsTo(Unidade::class);
+    }
+    public function setor()
+    {
+        return $this->belongsTo(Setor::class);
     }
 
     /**

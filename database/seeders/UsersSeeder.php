@@ -15,7 +15,17 @@ class UsersSeeder extends Seeder
        $admin =  User::create([
             'user'=> 'admin',
             'password' => '123',
-            'unidade_id' => '1'
+            'unidade_id' => 4,
+            'setor_id' => 1,
+
+        ]);
+
+        $admin->assignRole('admin');
+       $admin =  User::create([
+            'user'=> 'adminhosp',
+            'password' => '123',
+            'unidade_id' => 1,
+            'setor_id' => 2,
 
         ]);
 
@@ -24,7 +34,16 @@ class UsersSeeder extends Seeder
         $gestor1 = User::create([
             'user'=> 'gestor',
             'password' => '123',
-            'unidade_id' => '1'
+            'unidade_id' => 4,
+            'setor_id' => 1,
+        ]);
+
+        $gestor1->assignRole('gestor');
+        $gestor1 = User::create([
+            'user'=> 'hospital',
+            'password' => '123',
+            'unidade_id' => 1,
+            'setor_id' => 2,
         ]);
 
         $gestor1->assignRole('gestor');
@@ -32,7 +51,8 @@ class UsersSeeder extends Seeder
         $gestor2 = User::create([
             'user'=> 'barreiros',
             'password' => '123',
-            'unidade_id' => '2'
+            'unidade_id' => 7,
+            'setor_id' => 1,
         ]);
 
         $gestor2->assignRole('gestor');
@@ -40,7 +60,8 @@ class UsersSeeder extends Seeder
         $gestor3 = User::create([
             'user'=> 'rioverde',
             'password' => '123',
-            'unidade_id' => '3'
+            'unidade_id' => 8,
+            'setor_id' => 1,
         ]);
 
         $gestor3->assignRole('gestor');
@@ -48,7 +69,8 @@ class UsersSeeder extends Seeder
         $almas = User::create([
             'user'=> 'almas',
             'password' => '123',
-            'unidade_id' => '4'
+            'unidade_id' => 10,
+            'setor_id' => 1,
         ]);
 
         $almas->assignRole('gestor');
@@ -56,7 +78,8 @@ class UsersSeeder extends Seeder
         $lages = User::create([
             'user'=> 'lages',
             'password' => '123',
-            'unidade_id' => '3'
+            'unidade_id' => 11,
+            'setor_id' => 1,
         ]);
 
         $lages->assignRole('gestor');
@@ -64,7 +87,8 @@ class UsersSeeder extends Seeder
         $maravilha = User::create([
             'user'=> 'maravilha',
             'password' => '123',
-            'unidade_id' => '3'
+            'unidade_id' => 6,
+            'setor_id' => 1,
         ]);
 
         $maravilha->assignRole('gestor');
@@ -72,7 +96,8 @@ class UsersSeeder extends Seeder
         $user = User::create([
             'user'=> 'user',
             'password' => '123',
-            'unidade_id' => '1'
+            'unidade_id' => 4,
+            'setor_id' => 1,
         ]);
 
         $user->assignRole('user');
@@ -80,7 +105,8 @@ class UsersSeeder extends Seeder
         $superAdmin = User::create([
             'user'=> 'Super Admin',
             'password' => '123',
-            'unidade_id' => '1'
+            'unidade_id' => 4,
+            'setor_id' => 1,
 
         ]);
 

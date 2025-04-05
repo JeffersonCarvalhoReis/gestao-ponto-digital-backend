@@ -32,7 +32,7 @@ class FuncionariosExport implements FromCollection, ShouldAutoSize, WithMapping,
             $funcionario->nome,
             $funcionario->cargo->nome ?? 'Sem Cargo',
             $funcionario->unidade->nome,
-            $funcionario->dadosContrato->vinculo,
+            $funcionario->dadosContrato->vinculo ?? '',
             $funcionario->status ? 'Ativo' : 'Inativo',
         ];
     }

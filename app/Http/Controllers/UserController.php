@@ -25,9 +25,14 @@ class UserController extends Controller
      */
     public function index(Request $request)
     {
+        $authUser = auth()->user();
+
         $query =  User::with(['roles', 'unidade'])
         ->with('unidade')
         ->whereDoesntHave('roles', fn ($query) => $query->where('name', 'super admin'));
+        if(!$authUser->hasRole('super admin')) {
+            $query->where('setor_id', $authUser->setor_id);
+        }
 
         if($request->has('user')) {
             $user = $request->input('user');
@@ -38,15 +43,17 @@ class UserController extends Controller
         if($perPage == -1) {
             $perPage = User::count();
         }
-
+        if (!$request->order) {
+            $query->orderBy('updated_at', 'desc');
+        }
         $sortBy = $request->sortBy;
         $query->when( $request->order, function ($query, $order) use ($sortBy) {
             switch ($sortBy) {
-                case 'unidade.nome':
+                case 'unidade_nome':
                     $query->whereHas('unidade')
                     ->orderBy(
                     Unidade::select('nome')
-                            ->whereColumn('unidades.id', 'users.unidade_id'),
+                            ->whereColumn('unidades.id', 'users.setor_id'),
                 $order
                     );
                 break;
@@ -88,12 +95,18 @@ class UserController extends Controller
      */
     public function store(Request $request)
     {
+        $user = auth()->user();
+
+        if ($user->hasRole('admin')) {
+            $request->merge(['setor_id' => $user->setor_id]);
+        }
+
         $request->validate([
             'user' => 'required|string|unique:users',
             'senha' => 'required|string|min:8',
             'funcao' => 'required|exists:roles,name',
-            'unidade' => 'required|numeric|exists:unidades,id'
-
+            'unidade' => 'required|numeric|exists:unidades,id',
+            'setor_id' => 'required|numeric|exists:setores,id'
         ]);
 
 
@@ -102,8 +115,9 @@ class UserController extends Controller
         }
         $user = User::create([
             'user' => $request->user,
-            'password' => Hash::make($request->input('senha')),
-            'unidade_id' => (int)$request->input('unidade'),
+            'password' => Hash::make($request->senha),
+            'unidade_id' => (int)$request->unidade,
+            'setor_id' => (int)$request->setor_id,
 
         ]);
         $user->assignRole($request->funcao);
@@ -141,11 +155,13 @@ class UserController extends Controller
             'senha' => 'sometimes|string|min:8',
             'funcao' => 'sometimes|exists:roles,name',
             'unidade' => 'sometimes|numeric|exists:unidades,id',
+            'setor_id' => 'sometimes|exists:setores,id'
         ]);
 
         $data = [
             'user' => $request->user,
             'unidade_id' => $request->unidade,
+            'setor_id' => $request->setor_id,
         ];
 
         if(!empty($request->senha)){
@@ -234,7 +250,6 @@ class UserController extends Controller
 
         $user->delete();
 
-        // 🔹 Remover cookies no frontend
         return response()->json(['message' => 'Conta excluída com sucesso'], 200)
             ->withoutCookie('laravel_session')
             ->withoutCookie('XSRF-TOKEN');

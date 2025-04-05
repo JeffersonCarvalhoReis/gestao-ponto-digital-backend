@@ -6,7 +6,6 @@ use App\Http\Resources\RecessoResource;
 use App\Models\Recesso;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 
 class RecessoController extends Controller
 {
@@ -23,8 +22,15 @@ class RecessoController extends Controller
      */
     public function index(Request $request)
     {
+        $user = auth()->user();
 
         $query = Recesso::with('unidade');
+
+        if(!$user->hasRole('super admin')) {
+
+            $query->where('setor_id', $user->setor_id);
+
+        };
 
         $query->when($request->unidade_id, function ($query, $unidade_id) {
             $query->where('unidade_id', $unidade_id);
@@ -42,6 +48,8 @@ class RecessoController extends Controller
      */
     public function store(Request $request)
     {
+        $user = auth()->user();
+
         $validated = $request->validate([
             'data_inicio' => 'required|date',
             'data_fim' => 'nullable|after_or_equal:data_inicio|date',
@@ -52,7 +60,7 @@ class RecessoController extends Controller
         $dataFim = isset($validated['data_fim']) ? Carbon::create( $validated['data_fim']) : $dataInicio;
 
 
-        $datas = $dataInicio->daysUntil($dataFim)->map(function($data) use ($validated, $dataInicio, $dataFim){
+        $datas = $dataInicio->daysUntil($dataFim)->map(function($data) use ($validated, $dataInicio, $dataFim, $user){
             return [
                 'data' => $data->toDateString(),
                 'unidade_id' => $validated['unidade_id'] ?? null,
@@ -60,6 +68,7 @@ class RecessoController extends Controller
                 'data_fim' => $dataFim,
                 'tipo' => 'recesso',
                 'descricao' => 'Recesso',
+                'setor_id' => $user->setor_id,
                 'created_at' => now(),
                 'updated_at' => now(),
             ];

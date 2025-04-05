@@ -9,9 +9,11 @@ use App\Http\Controllers\FeriaController;
 use App\Http\Controllers\FuncionarioController;
 use App\Http\Controllers\JustificativaController;
 use App\Http\Controllers\LocalidadeController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\RecessoController;
 use App\Http\Controllers\RegistroPontoController;
 use App\Http\Controllers\RelatorioPontoController;
+use App\Http\Controllers\SetorController;
 use App\Http\Controllers\UnidadeController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
@@ -19,6 +21,7 @@ use Illuminate\Support\Facades\Route;
 Route::post('/login', [AuthController::class, 'login']);
 
 Route::middleware(['auth:sanctum'])->group(function(){
+    Route::post('/logout', [AuthController::class, 'logout']);
 
     Route::get('user', [AuthController::class, 'user']);
     Route::get('/usuario', [UserController::class, 'profile']);
@@ -34,10 +37,9 @@ Route::middleware(['auth:sanctum'])->group(function(){
     Route::post('registro-ponto/manual/{funcionario}', [RegistroPontoController::class, 'buscarFuncionarioManualmente']);
     Route::get('/registros-do-dia', [RegistroPontoController::class, 'registroDoDia']);
 
-    Route::post('/logout', [AuthController::class, 'logout']);
-
     // Relatório de Pontos
     Route::post('relatorio', [RelatorioPontoController::class, 'gerarRelatorio']);
+    Route::post('/relatorio-ponto/exportar', [RelatorioPontoController::class, 'exportarRelatorioExcel']);
 
     //Recuros
     Route::apiResource('/usuarios',  UserController::class);
@@ -45,14 +47,13 @@ Route::middleware(['auth:sanctum'])->group(function(){
     Route::apiResource('/cargos',  CargoController::class);
     Route::apiResource('/unidades',  UnidadeController::class);
     Route::apiResource('/justificativas',  JustificativaController::class);
+    Route::apiResource('/setores',  SetorController::class);
 
     // Dados dos funcionarios
     Route::apiResource('/funcionarios',  FuncionarioController::class);
     Route::get('/funcionarios/verificar-cpf/{cpf}',  [FuncionarioController::class, 'verificaCPF']);
     Route::post('/funcionarios/exportar',  [FuncionarioController::class, 'exportarFuncionarios']);
     Route::delete('/funcionarios/apagar-foto/{id}',  [FuncionarioController::class, 'apagarFoto']);
-    Route::post('dados-contratos', [DadosContratoController::class, 'store']);
-    Route::put('dados-contratos/{id}', [DadosContratoController::class, 'update']);
 
     // Dias sem expediente
     Route::post('ferias', [FeriaController::class, 'store']);
@@ -64,20 +65,12 @@ Route::middleware(['auth:sanctum'])->group(function(){
     Route::apiResource('/dia-nao-util',  DiaNaoUtilController::class);
     Route::get( '/proximos-feriados', [DiaNaoUtilController::class, 'proximosFeriados']);
 
-      // notificações não lidas para todos os usuarios
-    Route::get('/notifications', function () {
-        return [
-            'notifications' => auth()->user()->unreadNotifications
-        ];
-    });
+    // notificações
+    Route::get('/notifications', [NotificationController::class, 'allUnreadNotifications']);
+    Route::post('/notifications/{id}/read', [NotificationController::class, 'readNotification']);
+    Route::post('/notifications/read-all', [NotificationController::class, 'readAllNotifications']);
+    Route::post('/notifications/read-by-status', [NotificationController::class, 'markAllAsReadByStatus']);
 
-    // marcar notificação como lida
-    Route::post('/notifications/{id}/read', function ($id) {
-        auth()->user()->notifications()->where('id', $id)->update(['read_at' => now()]);
-        return response()->json(['success' => true]);
-    });
-
-    Route::post('/relatorio-ponto/exportar', [RelatorioPontoController::class, 'exportarRelatorioExcel']);
 });
 
 
