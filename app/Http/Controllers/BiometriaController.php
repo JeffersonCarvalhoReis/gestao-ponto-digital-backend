@@ -6,13 +6,14 @@ use App\Exceptions\BiometricException;
 use App\Models\Biometria;
 use App\Models\Funcionario;
 use Illuminate\Http\Client\RequestException;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class BiometriaController extends Controller
 {
-    private $apiUrl = 'http://localhost:5000/apiservice/';
+
     private $templates = null;
 
 
@@ -22,13 +23,11 @@ class BiometriaController extends Controller
 
     }
 
-    public function capturarBiometria(Funcionario $funcionario)
+    public function capturarBiometria(Funcionario $funcionario, Request $response)
     {
-        $response = Http::timeout(0)->get("{$this->apiUrl}capture-hash/");
 
+        if ($response['message'] == "Error on Capture: 513") {
 
-        if ($response['message']== "Error on Capture: 513") {
-            Log::info("Cancelado");
             throw new BiometricException("Captura cancelada");
         }
         if ($response['message'] == "Error on Capture: 261") {
@@ -67,15 +66,10 @@ class BiometriaController extends Controller
                 })->get(['id', 'template'])->toArray();
         }
 
-        try {
-            Http::post("{$this->apiUrl}load-to-memory/", $this->templates);
-        }
-        catch (Throwable $th) {
-            throw new BiometricException("Erro inesperado ao conectar-se à API biométrica.", 500);
-        }
+        return $this->templates;
 
     }
-    public function identificar()
+    public function identificar($response)
     {
         // $this->limparMemoria();
 
@@ -85,9 +79,6 @@ class BiometriaController extends Controller
 
         // }
 
-        try {
-            $response = Http::timeout(0)->get("{$this->apiUrl}identification/");
-
             if ($response['message']== "Error on Capture: 513") {
                 Log::info("Cancelado");
                 throw new BiometricException("Captura cancelada");
@@ -95,9 +86,7 @@ class BiometriaController extends Controller
             if ($response['message'] == "Error on Capture: 261") {
                 throw new BiometricException("Dispositivo não encontrado");
             }
-        } catch (RequestException $e) {
-            throw new BiometricException("Falha na requisição biométrica: " . $e->getMessage(), 0, $e);
-        }
+
 
         $biometria = Biometria::find($response->json('id'));
 
@@ -127,7 +116,6 @@ class BiometriaController extends Controller
     public function limparMemoria()
     {
         $this->templates = null;
-        Http::get("{$this->apiUrl}delete-all-from-memory/");
 
         return;
 

@@ -87,15 +87,5 @@ return Application::configure(basePath: dirname(__DIR__))
             }
 
         });
-        $exceptions->render(function (Throwable $e) {
-            if ($e instanceof ConnectionException) {
-                if (str_contains($e->getMessage(), 'localhost port 5000')) {
-                    return response()->json([
-                        'message' => 'Não foi possível se conectar com o sistema do aparelho biométrico'
-                    ], 500);
-                }
-            }
-
-        });
 
     })->create();

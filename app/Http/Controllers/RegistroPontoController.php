@@ -8,14 +8,18 @@ use App\Http\Resources\RegistroPontoResource;
 use App\Models\Funcionario;
 use App\Models\RegistroPonto;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
 
 class RegistroPontoController extends Controller
 {
 
-    public function buscarFuncionarioBiometria() {
+    public function buscarFuncionarioBiometria(Request $request) {
+
+
+
         $biometria = new BiometriaController;
 
-        $resposta = $biometria->identificar();
+        $resposta = $biometria->identificar($request);
         $sucesso = $resposta->original['sucesso'];
 
         if($sucesso) {
