@@ -77,6 +77,15 @@ return Application::configure(basePath: dirname(__DIR__))
             }
         });
         $exceptions->render(function (Throwable $e) {
+
+            if ($e instanceof BiometricException) {
+                return response()->json([
+                    'sucesso' => false,
+                    'message' => $e->getMessage()
+                ], 400); // ou 422 se for erro de validação
+            }
+        });
+        $exceptions->render(function (Throwable $e) {
             if ($e instanceof QueryException) {
                 // Verifica se o erro é de restrição de chave estrangeira
                 if (str_contains($e->getMessage(), 'Integrity constraint violation')) {
