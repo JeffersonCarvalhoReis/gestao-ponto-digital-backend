@@ -23,35 +23,46 @@ class BiometriaController extends Controller
 
     }
 
-    public function capturarBiometria(Funcionario $funcionario, Request $response)
+    public function capturarBiometria(Funcionario $funcionario, Request $request)
     {
+        $message = $request->input('message'); // pegando 'message' enviado do frontend
 
-        if ($response['message'] == "Error on Capture: 513") {
-
+        if ($message === "Error on Capture: 513") {
             throw new BiometricException("Captura cancelada");
         }
-        if ($response['message'] == "Error on Capture: 261") {
+
+        if ($message === "Error on Capture: 261") {
             throw new BiometricException("Dispositivo não encontrado");
         }
-        if ($response->successful()) {
-            $data = $response->json();
 
-            $template = Biometria::upsert([
-                'funcionario_id' => $funcionario->id,
-                'template' => $data['template'],
-            ],
-            ['funcionario_id'],
-            ['template', 'updated_at']
-        );
+        if ($request->input('success')) {
+            $data = $request->all();
+
+            $template = Biometria::upsert(
+                [
+                    'funcionario_id' => $funcionario->id,
+                    'template' => $data['template'],
+                ],
+                ['funcionario_id'],
+                ['template', 'updated_at']
+            );
 
             $this->limparMemoria();
             $this->carregar();
 
-            return response()->json(['message' => 'Template capturado com sucesso!', 'data' => $template]);
+            return response()->json([
+                'message' => 'Template capturado com sucesso!',
+                'data' => $template
+            ]);
         }
 
-        return response()->json($response->json(), 400);
+        // se chegar aqui, quer dizer que não houve sucesso e nem erro tratado acima
+        return response()->json([
+            'message' => 'Erro desconhecido ao capturar biometria',
+            'dados_recebidos' => $request->all()
+        ], 400);
     }
+
 
     public function carregar()
     {

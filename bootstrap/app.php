@@ -1,12 +1,12 @@
 <?php
 
+use App\Exceptions\BiometricException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Session\TokenMismatchException;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 use Spatie\Permission\Middleware\RoleMiddleware;
@@ -82,7 +82,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 return response()->json([
                     'sucesso' => false,
                     'message' => $e->getMessage()
-                ], 400); // ou 422 se for erro de validação
+                ], 400);
             }
         });
         $exceptions->render(function (Throwable $e) {
