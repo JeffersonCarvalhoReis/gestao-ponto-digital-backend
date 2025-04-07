@@ -91,7 +91,7 @@ class BiometriaController extends Controller
         // }
 
             if ($response['message']== "Error on Capture: 513") {
-                Log::info("Cancelado");
+
                 throw new BiometricException("Captura cancelada");
             }
             if ($response['message'] == "Error on Capture: 261") {

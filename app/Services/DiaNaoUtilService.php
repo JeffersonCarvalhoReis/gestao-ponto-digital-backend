@@ -14,7 +14,6 @@ class DiaNaoUtilService
         $user = auth()->user();
 
         $periodo = Carbon::now()->startOfYear()->startOfWeek()->daysUntil(Carbon::now()->endOfYear()->endOfWeek());
-        Log::info($user->setor_id);
 
         $finaisDeSemana = collect($periodo)->filter(function ($data) {
             return $data->isWeekend();

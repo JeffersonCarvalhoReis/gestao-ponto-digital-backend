@@ -3,7 +3,6 @@
 namespace App\Exports;
 
 use DateTime;
-use Illuminate\Support\Facades\Log;
 use IntlDateFormatter;
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
