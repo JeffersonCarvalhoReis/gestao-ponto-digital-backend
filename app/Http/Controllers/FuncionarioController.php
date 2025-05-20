@@ -189,7 +189,7 @@ class FuncionarioController extends Controller
             //funcionario
             $validatedFuncionario  = app(StoreFuncionarioRequest::class)->validated();
 
-            $validatedFuncionario ['data_nascimento'] = Carbon::create($validatedFuncionario ['data_nascimento']);
+            $validatedFuncionario['data_nascimento'] = Carbon::create($validatedFuncionario['data_nascimento']);
 
             if ($request->hasFile('foto')) {
                 $validatedFuncionario ['foto'] = $request->file('foto')->store('fotos_funcionarios', 'public');
