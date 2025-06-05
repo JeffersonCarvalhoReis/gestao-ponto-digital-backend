@@ -30,10 +30,10 @@ class CargoController extends Controller
         if($perPage == -1) {
             $perPage = Cargo::count();
         }
-        if(!$request->order) {
-            $query->orderBy('updated_at', 'desc');
-        }
 
+        if (!$request->has('sortBy') && !$request->has('order')) {
+            $query->orderBy('nome', 'asc');
+        }
         $order = $request->order;
         $query->when( $request->sortBy, function ($query, $sortBy) use ($order){
             $query->orderBy($sortBy, $order);
