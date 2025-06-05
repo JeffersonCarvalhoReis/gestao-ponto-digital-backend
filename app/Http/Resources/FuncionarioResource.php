@@ -5,6 +5,7 @@ namespace App\Http\Resources;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Carbon\Carbon;
+use Illuminate\Support\Str;
 
 class FuncionarioResource extends JsonResource
 {
@@ -22,7 +23,7 @@ class FuncionarioResource extends JsonResource
         }
         return [
             'id' => $this->id,
-            'nome' => $this->nome,
+            'nome' => Str::title($this->nome),
             'data_nascimento' => Carbon::parse($this->data_nascimento)->format('d/m/Y'),
             'cpf' => $this->cpf,
             'vinculo' => $this->DadosContrato->vinculo ?? null,
