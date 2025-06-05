@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Str;
 
 class CargoResource extends JsonResource
 {
@@ -16,7 +17,7 @@ class CargoResource extends JsonResource
     {
         return [
             'id'        => $this->id,
-            'nome'      => $this->nome,
+            'nome'      => Str::title($this->nome),
             'deletavel' => $this->funcionarios()->where('status', 1)->count() == 0
         ];
     }
