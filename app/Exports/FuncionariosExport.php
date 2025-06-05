@@ -30,7 +30,7 @@ class FuncionariosExport implements FromCollection, ShouldAutoSize, WithMapping,
     }
     public function map($funcionario): array {
         return [
-            $funcionario->nome,
+            Str::title( $funcionario->nome),
             $funcionario->cargo->nome ?? 'Sem Cargo',
             Str::title( $funcionario->unidade->nome),
             $funcionario->dadosContrato->vinculo ?? '',
