@@ -3,6 +3,7 @@
 namespace App\Exports;
 
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 use Log;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
@@ -31,7 +32,7 @@ class FuncionariosExport implements FromCollection, ShouldAutoSize, WithMapping,
         return [
             $funcionario->nome,
             $funcionario->cargo->nome ?? 'Sem Cargo',
-            $funcionario->unidade->nome,
+            Str::title( $funcionario->unidade->nome),
             $funcionario->dadosContrato->vinculo ?? '',
             $funcionario->status ? 'Ativo' : 'Inativo',
         ];
