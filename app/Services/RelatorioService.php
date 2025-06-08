@@ -129,6 +129,8 @@ class RelatorioService
             'minutos_trabalhados' => $resultado['minutosTrabalhados'],
             'horas_trabalhadas' => $resultado['horasTrabalhadas'],
             'biometrico' => $resultado['biometrico'],
+            'entrada' => $resultado['entrada'],
+            'saida' => $resultado['saida'],
             'justificativa' => $justificativa?->motivo,
             'justificativa_status' => $justificativa?->status,
             'descricao_dia_nao_util' => $diaNaoUtil?->descricao,
@@ -167,13 +169,20 @@ class RelatorioService
         $status = 'Falta';
         $minutosTrabalhados = 0;
         $pontoBiometrico = false;
+        $entrada = [];
+        $saida = [];
 
 
         if ($registrosPontoDia->isNotEmpty()) {
             $status = 'Presente';
             $minutosTrabalhados = $this->calcularMinutosTrabalhados($registrosPontoDia);
-            $ponto =$registrosPontoDia->first();
+            $ponto = $registrosPontoDia->first();
             $pontoBiometrico = $ponto->biometrico;
+
+            for ($i = 0; $i < count($registrosPontoDia); $i++) {
+                $entrada = $registrosPontoDia->pluck('hora_entrada')->toArray();
+                $saida = $registrosPontoDia->pluck('hora_saida')->toArray();
+            }
 
         } elseif ($feriasFuncionario) {
             $status = $feriasFuncionario->descricao;
@@ -195,6 +204,8 @@ class RelatorioService
             'status' => $status,
             'minutosTrabalhados' => $minutosTrabalhados,
             'horasTrabalhadas' => $horasTrabalhadas,
+            'entrada' => $entrada,
+            'saida' => $saida,
             'biometrico' => $pontoBiometrico
         ];
     }

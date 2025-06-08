@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Exports\RelatorioPontoExport;
+use App\Exports\RelatorioPontoIndividualExport;
 use App\Models\DiaNaoUtil;
 use App\Models\Feria;
 use App\Models\Funcionario;
@@ -126,6 +127,13 @@ class RelatorioPontoController extends Controller
         );
 
         return response()->json($resultado, 200);
+    }
+
+    public function gerarRelatorioIndividual(Request $request)
+    {
+        $dados = $request->all();
+
+        return Excel::download(new RelatorioPontoIndividualExport($dados), 'relatorio_ponto.xlsx');
     }
 
     /**

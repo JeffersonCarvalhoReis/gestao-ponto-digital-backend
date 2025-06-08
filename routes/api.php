@@ -40,6 +40,7 @@ Route::middleware(['auth:sanctum'])->group(function(){
     // Relatório de Pontos
     Route::post('relatorio', [RelatorioPontoController::class, 'gerarRelatorio']);
     Route::post('/relatorio-ponto/exportar', [RelatorioPontoController::class, 'exportarRelatorioExcel']);
+    Route::post('/relatorio-ponto/individual', [RelatorioPontoController::class, 'gerarRelatorioIndividual']);
 
     //Recuros
     Route::apiResource('/usuarios',  UserController::class);

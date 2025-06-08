@@ -2,14 +2,15 @@
 
 namespace App\Exports;
 
+use \PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use DateTime;
 use IntlDateFormatter;
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Concerns\WithStyles;
+use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
@@ -98,16 +99,16 @@ class RelatorioConsolidadoSheet implements FromArray, WithTitle, WithStyles, Sho
         $totalColunas = count($this->array()[0]);
 
         // Mesclar a primeira linha (cabeçalho) de A1 até a última coluna da tabela
-        $sheet->mergeCells('A1:' . \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($totalColunas) . '1');
+        $sheet->mergeCells('A1:' . Coordinate::stringFromColumnIndex($totalColunas) . '1');
 
         $highestRow = $sheet->getHighestRow();
         $highestColumn = $sheet->getHighestColumn();
-        $highestColumnIndex = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($highestColumn);
+        $highestColumnIndex = Coordinate::columnIndexFromString($highestColumn);
 
         // Habilitar quebra de linha (wrap text) em todas as células
         for ($row = 1; $row <= $highestRow; $row++) {
             for ($col = 1; $col <= $highestColumnIndex; $col++) {
-                $cellAddress = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col) . $row;
+                $cellAddress = Coordinate::stringFromColumnIndex($col) . $row;
                 // Aplica a formatação para quebra de linha (wrap text) utilizando o novo método
                 $sheet->getStyle($cellAddress)->getAlignment()->setWrapText(true);
             }
@@ -117,7 +118,7 @@ class RelatorioConsolidadoSheet implements FromArray, WithTitle, WithStyles, Sho
         for ($row = 7; $row <= $highestRow; $row++) {
             for ($col = 2; $col <= $highestColumnIndex; $col++) {
                   // Converte a posição numérica para a célula correspondente
-                $cellAddress = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col) . $row;
+                $cellAddress = Coordinate::stringFromColumnIndex($col) . $row;
                 // Obtém o valor da célula
                 $value = $sheet->getCell($cellAddress)->getValue();
                 $style = $sheet->getStyle($cellAddress);
@@ -252,7 +253,7 @@ class RelatorioConsolidadoSheet implements FromArray, WithTitle, WithStyles, Sho
                 $totalLinhasDados = $totalLinhas + 5;
                 // Definir o intervalo para o formato da tabela
                 // Por exemplo, se os dados começam na linha 2 e vão até a última linha
-                $range = 'A6:' . \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($totalColunas) . $totalLinhasDados;
+                $range = 'A6:' . Coordinate::stringFromColumnIndex($totalColunas) . $totalLinhasDados;
 
                 // Ativar filtro automático
                 $sheet->setAutoFilter($range);
@@ -271,7 +272,7 @@ class RelatorioConsolidadoSheet implements FromArray, WithTitle, WithStyles, Sho
                 ],
             ]);
             // Aplicar a formatação de tabela nas outras colunas (da B em diante)
-            $sheet->getStyle('B6:' . \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($totalColunas) . ($totalLinhasDados))
+            $sheet->getStyle('B6:' . Coordinate::stringFromColumnIndex($totalColunas) . ($totalLinhasDados))
                   ->applyFromArray([
                       'borders' => [
                           'allBorders' => [
