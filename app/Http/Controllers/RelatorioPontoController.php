@@ -65,6 +65,8 @@ class RelatorioPontoController extends Controller
                 $siglaStatus = $this->relatorioService->mapearStatusParaSigla($registro['status']);
 
                 $linhasExportacao[] = [
+                    'entrada' => $registro['entrada'],
+                    'saida' => $registro['saida'],
                     'funcionario' => $nomeFuncionario,
                     'data' => $registro['data'],
                     'sigla_status' => $siglaStatus,

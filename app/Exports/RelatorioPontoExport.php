@@ -2,12 +2,11 @@
 
 namespace App\Exports;
 
-use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 use App\Exports\RelatorioConsolidadoSheet;
 
 
-class RelatorioPontoExport implements WithMultipleSheets, ShouldAutoSize
+class RelatorioPontoExport implements WithMultipleSheets
 {
     protected $dados;
     protected $dadosSemanais;
@@ -28,6 +27,7 @@ class RelatorioPontoExport implements WithMultipleSheets, ShouldAutoSize
     public function sheets(): array
     {
         return [
+            new RelatorioConsolidadoSheet($this->dados, $this->ano, $this->mes, $this->unidade, true ),
             new RelatorioConsolidadoSheet($this->dados, $this->ano, $this->mes, $this->unidade ),
             new RelatorioHorasTrabalhdasSemanaisSheet($this->dadosSemanais, $this->ano, $this->mes, $this->unidade)
         ];
