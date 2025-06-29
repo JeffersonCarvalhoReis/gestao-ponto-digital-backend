@@ -113,7 +113,7 @@ class RelatorioPontoIndividualExport implements FromArray, WithHeadings, WithTit
                     ],
                 ]);
 
-                $sheet->getStyle('A1:H' . ($lastRow))
+                $sheet->getStyle('A5:H' . ($lastRow))
                 ->applyFromArray([
                     'borders' => [
                         'allBorders' => [
@@ -124,9 +124,13 @@ class RelatorioPontoIndividualExport implements FromArray, WithHeadings, WithTit
                 ]);
 
                 // Ajusta largura automática
-                foreach (range('A', 'H') as $col) {
+                foreach (range('A', 'E') as $col) {
                     $sheet->getColumnDimension($col)->setAutoSize(true);
                 }
+                foreach (range('F', 'H') as $col) {
+                    $sheet->getColumnDimension($col)->setWidth(25);
+                }
+                $sheet->getStyle("F5:H{$lastRow}")->getAlignment()->setWrapText(true);
 
                 // Aplica cores por status
                 for ($row = 6; $row <= $lastRow; $row++) {
@@ -142,6 +146,15 @@ class RelatorioPontoIndividualExport implements FromArray, WithHeadings, WithTit
                         $sheet->getStyle("B{$row}")->getFill()->setFillType('solid')->getStartColor()->setRGB($color);
                     }
                 }
+
+                $sheet->getPageSetup()->setOrientation(\PhpOffice\PhpSpreadsheet\Worksheet\PageSetup::ORIENTATION_LANDSCAPE);
+                $sheet->getPageSetup()->setFitToPage(true);
+                $sheet->getPageSetup()->setFitToWidth(1);
+                $sheet->getPageSetup()->setFitToHeight(0);
+                $sheet->getPageMargins()->setTop(0.25);
+                $sheet->getPageMargins()->setRight(0.2);
+                $sheet->getPageMargins()->setLeft(0.2);
+                $sheet->getPageMargins()->setBottom(0.25);
             },
         ];
     }
