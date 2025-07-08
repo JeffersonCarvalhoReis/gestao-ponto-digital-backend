@@ -138,7 +138,7 @@ class RelatorioConsolidadoSheet implements FromArray, WithTitle, WithStyles, Sho
                 for ($i = 0; $i < $max; $i++) {
                     $entrada = isset($entradas[$i]) ? $entradas[$i] : '';
                     $saida = isset($saidas[$i]) ? $saidas[$i] : '';
-                    $linha = trim($entrada . ' | ' . $saida);
+                    $linha = trim("E: $entrada\nS: $saida");
 
                     $i == ($max - 1) ? $dadosAgrupados[$func][$dia] .= $linha : $dadosAgrupados[$func][$dia] .= $linha . "\n";
                 }
@@ -236,7 +236,6 @@ class RelatorioConsolidadoSheet implements FromArray, WithTitle, WithStyles, Sho
             }
         }
 
-
         return [];
     }
 
@@ -328,8 +327,7 @@ class RelatorioConsolidadoSheet implements FromArray, WithTitle, WithStyles, Sho
         $fill = $style->getFill();
         $font = $style->getFont();
 
-        if (str_contains($value, '|')) {
-            // Contém "|"
+        if (str_contains($value, 'E')) {
             $fill->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
                 ->getStartColor()->setRGB('c6efce'); // Verde
             $font->getColor()->setRGB('006100'); // Preto
@@ -469,6 +467,9 @@ class RelatorioConsolidadoSheet implements FromArray, WithTitle, WithStyles, Sho
                         'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
                         'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
                     ],
+                    'font' => [
+                        'size' => 9,
+                    ]
                 ]);
                 $sheet->getStyle( Coordinate::stringFromColumnIndex($totalColunas - 1) . ($totalLinhasDados))
                 ->applyFromArray([
