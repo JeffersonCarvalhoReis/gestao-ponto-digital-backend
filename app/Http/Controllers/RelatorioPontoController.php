@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use App\Exports\RelatorioPontoExport;
@@ -27,7 +26,7 @@ class RelatorioPontoController extends Controller
     public function __construct(DiaNaoUtilService $diaNaoUtilService, RelatorioService $relatorioService)
     {
         $this->diaNaoUtilService = $diaNaoUtilService;
-        $this->relatorioService = $relatorioService;
+        $this->relatorioService  = $relatorioService;
         $this->middleware('permission:gerar_relatorios')->only('gerarRelatorio');
     }
 
@@ -36,13 +35,15 @@ class RelatorioPontoController extends Controller
         $this->validarRequisicao($request);
 
         $unidadeId = $request->unidade;
-        $mes = $request->mes;
-        $ano = $request->ano;
+        $mes       = $request->mes;
+        $ano       = $request->ano;
 
         $funcionarios = $this->obterFuncionarios($unidadeId);
-        $periodo = $this->definirPeriodoMes($ano, $mes);
+        $periodo      = $this->definirPeriodoMes($ano, $mes);
+
         $this->preencherDiasNaoUteis();
-        $dadosRelatorio = $this->obterDadosRelatorio($periodo, $unidadeId);
+
+        $dadosRelatorio = $this->obterDadosRelatorio($periodo, $unidadeId, $funcionarios);
 
         $resultado = $this->relatorioService->processarRelatorio($funcionarios, $periodo, $dadosRelatorio);
 
@@ -55,9 +56,9 @@ class RelatorioPontoController extends Controller
         // Transforma o resultado em uma Collection simples para exportação
         $linhasExportacao = [];
 
-        $relatorioDias = $resultado['relatorio_dias'];
-        $dadosSemanais = $resultado['relatorio_semanas'];
-        $linhasExportacao = [];
+        $relatorioDias      = $resultado['relatorio_dias'];
+        $dadosSemanais      = $resultado['relatorio_semanas'];
+        $linhasExportacao   = [];
         $linhasExportacao[] = $cabecalho;
 
         foreach ($relatorioDias as $nomeFuncionario => $registros) {
@@ -65,33 +66,32 @@ class RelatorioPontoController extends Controller
                 $siglaStatus = $this->relatorioService->mapearStatusParaSigla($registro['status']);
 
                 $linhasExportacao[] = [
-                    'entrada' => $registro['entrada'],
-                    'saida' => $registro['saida'],
-                    'funcionario' => $nomeFuncionario,
-                    'data' => $registro['data'],
-                    'sigla_status' => $siglaStatus,
-                    'horas_trabalhadas' => $registro['horas_trabalhadas'],
-                    'justificativa' => $registro['justificativa'] ?? '',
-                    'status_justificativa' => $registro['justificativa_status'] ?? '',
+                    'entrada'                => $registro['entrada'],
+                    'saida'                  => $registro['saida'],
+                    'funcionario'            => $nomeFuncionario,
+                    'data'                   => $registro['data'],
+                    'sigla_status'           => $siglaStatus,
+                    'horas_trabalhadas'      => $registro['horas_trabalhadas'],
+                    'justificativa'          => $registro['justificativa'] ?? '',
+                    'status_justificativa'   => $registro['justificativa_status'] ?? '',
                     'descricao_dia_nao_util' => $registro['descricao_dia_nao_util'] ?? '',
                 ];
             }
         }
-        $linhasExportacaoSemanais = [];
 
+        $linhasExportacaoSemanais = [];
         foreach ($dadosSemanais as $nomeFuncionario => $registros) {
             // Inicializa um array para armazenar os registros do funcionário em uma linha
-            if (!isset($linhasExportacaoSemanais[$nomeFuncionario])) {
+            if (! isset($linhasExportacaoSemanais[$nomeFuncionario])) {
                 $linhasExportacaoSemanais[$nomeFuncionario] = ['funcionario' => $nomeFuncionario];
             }
 
             // Adiciona os registros como colunas
             foreach ($registros as $index => $registro) {
-                $linhasExportacaoSemanais[$nomeFuncionario]["data_$index"] = str_replace(':', 'h', $registro) ;
+                $linhasExportacaoSemanais[$nomeFuncionario]["data_$index"] = str_replace(':', 'h', $registro);
             }
         }
         $linhasExportacaoSemanais = array_values($linhasExportacaoSemanais);
-
 
         return Excel::download(new RelatorioPontoExport(collect($linhasExportacao), collect($linhasExportacaoSemanais), $ano, $mes, $unidade->nome), 'relatorio_ponto.xlsx');
     }
@@ -107,8 +107,8 @@ class RelatorioPontoController extends Controller
         $this->validarRequisicao($request);
 
         $unidadeId = $request->unidade;
-        $mes = $request->mes;
-        $ano = $request->ano;
+        $mes       = $request->mes;
+        $ano       = $request->ano;
         // Obtém funcionários com base nas permissões do usuário
         $funcionarios = $this->obterFuncionarios($unidadeId);
 
@@ -119,7 +119,7 @@ class RelatorioPontoController extends Controller
         $this->preencherDiasNaoUteis();
 
         // Obtém todos os dados necessários para o relatório
-        $dadosRelatorio = $this->obterDadosRelatorio($periodo, $unidadeId);
+        $dadosRelatorio = $this->obterDadosRelatorio($periodo, $unidadeId, $funcionarios);
 
         // Processa os dados e gera o relatório
         $resultado = $this->relatorioService->processarRelatorio(
@@ -145,8 +145,8 @@ class RelatorioPontoController extends Controller
     {
         $request->validate([
             'unidade' => 'required|exists:unidades,id',
-            'mes' => 'required|date_format:m',
-            'ano' => 'required|date_format:Y'
+            'mes'     => 'required|date_format:m',
+            'ano'     => 'required|date_format:Y',
         ]);
     }
 
@@ -156,9 +156,9 @@ class RelatorioPontoController extends Controller
     private function obterFuncionarios($unidadeId)
     {
         $query = Funcionario::query();
-        $user = Auth::user();
+        $user  = Auth::user();
 
-        if (!$user->hasAnyRole(['admin', 'super admin'])) {
+        if (! $user->hasAnyRole(['admin', 'super admin'])) {
             $query->where('unidade_id', $user->unidade_id);
         } else {
             $query->where('unidade_id', $unidadeId);
@@ -173,18 +173,17 @@ class RelatorioPontoController extends Controller
     private function definirPeriodo($ano, $mes)
     {
         $inicioPeriodo = Carbon::create($ano, $mes, 1)->startOfWeek();
-        $fimPeriodo = Carbon::create($ano, $mes)->endOfMonth()->endOfWeek();
+        $fimPeriodo    = Carbon::create($ano, $mes)->endOfMonth()->endOfWeek();
 
         return CarbonPeriod::create($inicioPeriodo, $fimPeriodo);
     }
     private function definirPeriodoMes($ano, $mes)
     {
         $inicioPeriodo = Carbon::create($ano, $mes, 1);
-        $fimPeriodo = Carbon::create($ano, $mes)->endOfMonth();
+        $fimPeriodo    = Carbon::create($ano, $mes)->endOfMonth();
 
         return CarbonPeriod::create($inicioPeriodo, $fimPeriodo);
     }
-
 
     /**
      * Preenche dados de dias não úteis se necessário
@@ -198,17 +197,18 @@ class RelatorioPontoController extends Controller
     /**
      * Obtém todos os dados necessários para o relatório
      */
-    private function obterDadosRelatorio($periodo, $unidadeId)
+    private function obterDadosRelatorio($periodo, $unidadeId, $funcionarios)
     {
-        $inicioPeriodo = $periodo->getStartDate();
-        $fimPeriodo = $periodo->getEndDate();
+        $inicioPeriodo   = $periodo->getStartDate();
+        $fimPeriodo      = $periodo->getEndDate();
+        $funcionariosIds = $funcionarios->pluck('id');
 
         return [
-            'diasNaoUteis' => $this->obterDiasNaoUteis($inicioPeriodo, $fimPeriodo, $unidadeId),
-            'ferias' => $this->obterFerias($inicioPeriodo, $fimPeriodo),
-            'recessos' => $this->obterRecessos($unidadeId, $inicioPeriodo, $fimPeriodo),
-            'justificativas' => $this->obterJustificativas($inicioPeriodo, $fimPeriodo),
-            'registrosPonto' => $this->obterRegistrosPonto($inicioPeriodo, $fimPeriodo)
+            'diasNaoUteis'   => $this->obterDiasNaoUteis($inicioPeriodo, $fimPeriodo, $unidadeId),
+            'ferias'         => $this->obterFerias($inicioPeriodo, $fimPeriodo, $funcionariosIds),
+            'recessos'       => $this->obterRecessos($unidadeId, $inicioPeriodo, $fimPeriodo),
+            'justificativas' => $this->obterJustificativas($inicioPeriodo, $fimPeriodo, $funcionariosIds),
+            'registrosPonto' => $this->obterRegistrosPonto($inicioPeriodo, $fimPeriodo, $funcionariosIds),
         ];
     }
 
@@ -221,15 +221,22 @@ class RelatorioPontoController extends Controller
 
         $unidadeSetorId = $unidade->localidade->setor_id;
 
-        return DiaNaoUtil::where('setor_id', $unidadeSetorId)->whereBetween('data', [$inicioPeriodo, $fimPeriodo])->get();
+        return DiaNaoUtil::where('setor_id', $unidadeSetorId)
+            ->whereBetween('data', [$inicioPeriodo, $fimPeriodo])
+            ->get()
+            ->keyBy('data');
     }
 
     /**
      * Obtém férias no período
      */
-    private function obterFerias($inicioPeriodo, $fimPeriodo)
+    private function obterFerias($inicioPeriodo, $fimPeriodo, $funcionariosIds)
     {
-        return Feria::whereBetween('data', [$inicioPeriodo, $fimPeriodo])->get();
+        return Feria::whereIn('funcionario_id', $funcionariosIds)
+            ->whereBetween('data', [$inicioPeriodo, $fimPeriodo])
+            ->get()
+            ->groupBy('funcionario_id')
+            ->map(fn($g) => $g->keyBy('data'));
     }
 
     /**
@@ -241,26 +248,37 @@ class RelatorioPontoController extends Controller
 
         $unidadeSetorId = $unidade->localidade->setor_id;
 
-        return Recesso::where(function($query) use ($unidadeId, $unidadeSetorId) {
-            $query->where('unidade_id', $unidadeId)
+        return Recesso::whereBetween('data', [$inicioPeriodo, $fimPeriodo])
+            ->where(function ($q) use ($unidadeId, $unidadeSetorId) {
+                $q->where('unidade_id', $unidadeId)
                     ->orWhere('setor_id', $unidadeSetorId);
-        })->whereBetween('data', [$inicioPeriodo, $fimPeriodo])->get();
+            })
+            ->get()
+            ->groupBy('setor_id')
+            ->map(fn($g) => $g->keyBy('data'));
     }
 
     /**
      * Obtém justificativas no período
      */
-    private function obterJustificativas($inicioPeriodo, $fimPeriodo)
+    private function obterJustificativas($inicioPeriodo, $fimPeriodo, $funcionariosIds)
     {
-        return Justificativa::whereBetween('data', [$inicioPeriodo, $fimPeriodo])->get();
+        return Justificativa::whereIn('funcionario_id', $funcionariosIds)
+            ->whereBetween('data', [$inicioPeriodo, $fimPeriodo])
+            ->get()
+            ->groupBy('funcionario_id')
+            ->map(fn($g) => $g->keyBy('data'));
     }
 
     /**
      * Obtém registros de ponto no período
      */
-    private function obterRegistrosPonto($inicioPeriodo, $fimPeriodo)
+    private function obterRegistrosPonto($inicioPeriodo, $fimPeriodo, $funcionariosIds)
     {
-        return RegistroPonto::whereBetween('data_local', [$inicioPeriodo, $fimPeriodo])->get();
+        return RegistroPonto::whereIn('funcionario_id', $funcionariosIds)
+            ->whereBetween('data_local', [$inicioPeriodo, $fimPeriodo])
+            ->get()
+            ->groupBy('funcionario_id')
+            ->map(fn($grupo) => $grupo->groupBy(fn($r) => Carbon::parse($r->data_local)->toDateString()));
     }
 }
-

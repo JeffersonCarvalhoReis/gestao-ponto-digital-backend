@@ -1,10 +1,8 @@
 <?php
-
 namespace App\Services;
 
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
-use Log;
 
 class RelatorioService
 {
@@ -19,7 +17,7 @@ class RelatorioService
     public function processarRelatorio($funcionarios, $periodo, $dadosRelatorio)
     {
         $relatorioSemanas = [];
-        $relatorioDias = [];
+        $relatorioDias    = [];
 
         foreach ($funcionarios as $funcionario) {
             $resultado = $this->processarDadosFuncionario(
@@ -36,7 +34,7 @@ class RelatorioService
 
         return [
             'relatorio_semanas' => $relatorioSemanas,
-            'relatorio_dias' => $relatorioDias,
+            'relatorio_dias'    => $relatorioDias,
         ];
     }
 
@@ -51,7 +49,7 @@ class RelatorioService
     private function processarDadosFuncionario($funcionario, $periodo, $dadosRelatorio)
     {
         $horasPorSemana = [];
-        $relatorioDias = [];
+        $relatorioDias  = [];
 
         foreach ($periodo as $dia) {
             $diaRelatorio = $this->consolidarDadosDia(
@@ -64,7 +62,7 @@ class RelatorioService
 
             // Acumula horas por semana
             $semana = $dia->weekOfMonth;
-            if (!isset($horasPorSemana[$semana])) {
+            if (! isset($horasPorSemana[$semana])) {
                 $horasPorSemana[$semana] = 0;
             }
             $horasPorSemana[$semana] += $diaRelatorio['minutos_trabalhados'];
@@ -75,7 +73,7 @@ class RelatorioService
 
         return [
             'horasPorSemana' => $horasPorSemanaFormatado,
-            'relatorioDias' => $relatorioDias
+            'relatorioDias'  => $relatorioDias,
         ];
     }
 
@@ -88,7 +86,7 @@ class RelatorioService
     private function formatarHorasPorSemana($horasPorSemana)
     {
         return array_map(function ($minutos) {
-            $horas = intdiv($minutos, 60);
+            $horas        = intdiv($minutos, 60);
             $restoMinutos = $minutos % 60;
             return sprintf('%02d:%02d', $horas, $restoMinutos);
         }, $horasPorSemana);
@@ -105,17 +103,23 @@ class RelatorioService
     public function consolidarDadosDia($dia, $funcionarioId, $dadosRelatorio)
     {
         // Extrai os dados necessários
-        $diasNaoUteis = $dadosRelatorio['diasNaoUteis'];
-        $recessos = $dadosRelatorio['recessos'];
-        $ferias = $dadosRelatorio['ferias'];
+        $diasNaoUteis   = $dadosRelatorio['diasNaoUteis'];
+        $recessos       = $dadosRelatorio['recessos'];
+        $ferias         = $dadosRelatorio['ferias'];
         $justificativas = $dadosRelatorio['justificativas'];
         $registrosPonto = $dadosRelatorio['registrosPonto'];
 
         // Verifica o status do dia
-        $diaNaoUtil = $diasNaoUteis->firstWhere('data', $dia);
-        $recesso = $recessos->firstWhere('data', $dia);
-        $feriasFuncionario = $ferias->where('funcionario_id', $funcionarioId)->firstWhere('data', $dia);
-        $justificativa = $justificativas->where('funcionario_id', $funcionarioId)->firstWhere('data', $dia);
+        $diaNaoUtil = $diasNaoUteis[$dia] ?? null;
+        $recesso    = null;
+        foreach ($recessos as $grupo) {
+            if (isset($grupo[$dia])) {
+                $recesso = $grupo[$dia];
+                break;
+            }
+        }
+        $feriasFuncionario = $ferias[$funcionarioId][$dia] ?? null;
+        $justificativa     = $justificativas[$funcionarioId][$dia] ?? null;
 
         // Filtra registros de ponto do funcionário no dia
         $registrosPontoDia = $this->filtrarRegistrosPontoDia($registrosPonto, $funcionarioId, $dia);
@@ -124,15 +128,15 @@ class RelatorioService
         $resultado = $this->determinarStatusEHoras($registrosPontoDia, $justificativa, $diaNaoUtil, $feriasFuncionario, $recesso, $dia);
 
         return [
-            'data' => $dia,
-            'status' => $resultado['status'],
-            'minutos_trabalhados' => $resultado['minutosTrabalhados'],
-            'horas_trabalhadas' => $resultado['horasTrabalhadas'],
-            'biometrico' => $resultado['biometrico'],
-            'entrada' => $resultado['entrada'],
-            'saida' => $resultado['saida'],
-            'justificativa' => $justificativa?->motivo,
-            'justificativa_status' => $justificativa?->status,
+            'data'                   => $dia,
+            'status'                 => $resultado['status'],
+            'minutos_trabalhados'    => $resultado['minutosTrabalhados'],
+            'horas_trabalhadas'      => $resultado['horasTrabalhadas'],
+            'biometrico'             => $resultado['biometrico'],
+            'entrada'                => $resultado['entrada'],
+            'saida'                  => $resultado['saida'],
+            'justificativa'          => $justificativa?->motivo,
+            'justificativa_status'   => $justificativa?->status,
             'descricao_dia_nao_util' => $diaNaoUtil?->descricao,
         ];
     }
@@ -147,10 +151,7 @@ class RelatorioService
      */
     private function filtrarRegistrosPontoDia($registrosPonto, $funcionarioId, $dia)
     {
-        return $registrosPonto->filter(function ($registro) use ($funcionarioId, $dia) {
-            return $registro->funcionario_id === $funcionarioId &&
-                   Carbon::parse($registro->data_local)->toDateString() === $dia;
-        });
+        return $registrosPonto[$funcionarioId][$dia] ?? collect();
     }
 
     /**
@@ -166,22 +167,21 @@ class RelatorioService
      */
     private function determinarStatusEHoras($registrosPontoDia, $justificativa, $diaNaoUtil, $feriasFuncionario, $recesso, $dia)
     {
-        $status = 'Falta';
+        $status             = 'Falta';
         $minutosTrabalhados = 0;
-        $pontoBiometrico = false;
-        $entrada = [];
-        $saida = [];
-
+        $pontoBiometrico    = false;
+        $entrada            = [];
+        $saida              = [];
 
         if ($registrosPontoDia->isNotEmpty()) {
-            $status = 'Presente';
+            $status             = 'Presente';
             $minutosTrabalhados = $this->calcularMinutosTrabalhados($registrosPontoDia);
-            $ponto = $registrosPontoDia->first();
-            $pontoBiometrico = $ponto->biometrico;
+            $ponto              = $registrosPontoDia->first();
+            $pontoBiometrico    = $ponto->biometrico;
 
             for ($i = 0; $i < count($registrosPontoDia); $i++) {
                 $entrada = $registrosPontoDia->pluck('hora_entrada')->toArray();
-                $saida = $registrosPontoDia->pluck('hora_saida')->toArray();
+                $saida   = $registrosPontoDia->pluck('hora_saida')->toArray();
             }
 
         } elseif ($feriasFuncionario) {
@@ -192,7 +192,7 @@ class RelatorioService
             $status = 'Feriado';
         } elseif ($diaNaoUtil?->tipo === 'final_de_semana') {
             $status = 'Final de Semana';
-        }  elseif ($justificativa) {
+        } elseif ($justificativa) {
             $status = $this->determinarStatusJustificativa($justificativa);
         } elseif ($dia > Carbon::today()->toDateString()) {
             $status = '';
@@ -201,12 +201,12 @@ class RelatorioService
         $horasTrabalhadas = $this->formatarMinutosEmHoras($minutosTrabalhados);
 
         return [
-            'status' => $status,
+            'status'             => $status,
             'minutosTrabalhados' => $minutosTrabalhados,
-            'horasTrabalhadas' => $horasTrabalhadas,
-            'entrada' => $entrada,
-            'saida' => $saida,
-            'biometrico' => $pontoBiometrico
+            'horasTrabalhadas'   => $horasTrabalhadas,
+            'entrada'            => $entrada,
+            'saida'              => $saida,
+            'biometrico'         => $pontoBiometrico,
         ];
     }
 
@@ -254,20 +254,19 @@ class RelatorioService
     }
 
     public function mapearStatusParaSigla(string $status): string
-{
-    return match($status) {
-        'Falta' => 'F',
-        'Presente' => 'P',
-        'Feriado' => 'FR',
-        'Final de Semana' => 'FS',
-        'Recesso' => 'R',
-        'Justificado' => 'J',
-        'Pendente' => 'PE',
-        'Férias' => 'FE',
-        '' => '-',
-        default => 'L',
-    };
-}
+    {
+        return match ($status) {
+            'Falta'           => 'F',
+            'Presente'        => 'P',
+            'Feriado'         => 'FR',
+            'Final de Semana' => 'FS',
+            'Recesso'         => 'R',
+            'Justificado'     => 'J',
+            'Pendente'        => 'PE',
+            'Férias'          => 'FE',
+            ''                => '-',
+            default           => 'L',
+        };
+    }
 
 }
-

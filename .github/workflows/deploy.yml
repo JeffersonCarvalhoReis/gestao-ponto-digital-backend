@@ -1,0 +1,48 @@
+name: Deploy do Back-end
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Criar pasta SSH
+        run: mkdir -p ~/.ssh
+
+      - name: Adicionar chave privada
+        run: |
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+
+      - name: Adicionar host conhecido
+        run: ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy via SSH
+        run: |
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+            cd ${{ secrets.PROJECT_PATH }}
+            git config --global --add safe.directory ${{ secrets.PROJECT_PATH }}
+            git pull --rebase origin main
+
+            # Instalar dependências PHP
+            composer install --no-interaction --prefer-dist --optimize-autoloader
+
+            # Rodar migrations
+            php artisan migrate --force
+
+            # Limpar caches
+            php artisan config:cache
+            php artisan route:cache
+            php artisan view:cache
+
+            # Reiniciar servidor (exemplo usando systemctl e php-fpm/nginx)
+            sudo systemctl restart php8.3-fpm
+            sudo systemctl reload nginx
+          EOF
