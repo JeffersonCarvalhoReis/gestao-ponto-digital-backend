@@ -22,6 +22,7 @@ class StoreFuncionarioRequest extends FormRequest
                 ->with('localidade')
                 ->first()?->localidade?->setor_id;
         }
+                return true;
 
         if ($setorId) {
             $cpf = $this->cpf;
