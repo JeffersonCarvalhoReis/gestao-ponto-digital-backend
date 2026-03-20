@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use App\Http\Resources\UserResource;
@@ -27,65 +26,65 @@ class UserController extends Controller
     {
         $authUser = auth()->user();
 
-        $query =  User::with(['roles', 'unidade'])
-        ->with('unidade')
-        ->whereDoesntHave('roles', fn ($query) => $query->where('name', 'super admin'));
-        if(!$authUser->hasRole('super admin')) {
+        $query = User::with(['roles', 'unidade'])
+            ->with('unidade')
+            ->whereDoesntHave('roles', fn($query) => $query->where('name', 'super admin'));
+        if (! $authUser->hasRole('super admin')) {
             $query->where('setor_id', $authUser->setor_id);
         }
 
-        if($request->has('user')) {
-            $user = $request->input('user');
-            $query->where('name', 'like', "%$user%");
+        if ($request->has('nome')) {
+            $user = $request->input('nome');
+            $query->where('user', 'like', "%$user%");
         }
 
         $perPage = $request->input('per_page', 10);
-        if($perPage == -1) {
+        if ($perPage == -1) {
             $perPage = User::count();
         }
-        if (!$request->order) {
+        if (! $request->order) {
             $query->orderBy('updated_at', 'desc');
         }
         $sortBy = $request->sortBy;
-        $query->when( $request->order, function ($query, $order) use ($sortBy) {
+        $query->when($request->order, function ($query, $order) use ($sortBy) {
             switch ($sortBy) {
                 case 'unidade_nome':
                     $query->whereHas('unidade')
-                    ->orderBy(
-                    Unidade::select('nome')
-                            ->whereColumn('unidades.id', 'users.setor_id'),
-                $order
-                    );
-                break;
+                        ->orderBy(
+                            Unidade::select('nome')
+                                ->whereColumn('unidades.id', 'users.setor_id'),
+                            $order
+                        );
+                    break;
 
                 case 'funcao':
                     $query->addSelect([
-                            'role_name' => Role::select('name')
+                        'role_name' => Role::select('name')
                             ->join('model_has_roles', 'roles.id', '=', 'model_has_roles.role_id')
                             ->whereColumn('model_has_roles.model_id', 'users.id')
                             ->orderBy('roles.name', $order)
-                            ->limit(1)
+                            ->limit(1),
                     ])->orderBy('role_name', $order);
-                break;
+                    break;
 
                 default:
 
-                $query->orderBy($sortBy, $order);
-                break;
+                    $query->orderBy($sortBy, $order);
+                    break;
             }
 
         });
 
-        $usersPaginado= $query->paginate($perPage);
-        $users = UserResource::collection($usersPaginado);
+        $usersPaginado = $query->paginate($perPage);
+        $users         = UserResource::collection($usersPaginado);
 
         return response()->json([
             'data' => $users,
             'meta' => [
                 'current_page' => $usersPaginado->currentPage(),
-                'last_page' => $usersPaginado->lastPage(),
-                'per_page' => $usersPaginado->perPage(),
-                'total' => $usersPaginado->total(),
+                'last_page'    => $usersPaginado->lastPage(),
+                'per_page'     => $usersPaginado->perPage(),
+                'total'        => $usersPaginado->total(),
             ],
         ], 200);
     }
@@ -102,22 +101,21 @@ class UserController extends Controller
         }
 
         $request->validate([
-            'user' => 'required|string|unique:users',
-            'senha' => 'required|string|min:8',
-            'funcao' => 'required|exists:roles,name',
-            'unidade' => 'required|numeric|exists:unidades,id',
-            'setor_id' => 'required|numeric|exists:setores,id'
+            'user'     => 'required|string|unique:users',
+            'senha'    => 'required|string|min:8',
+            'funcao'   => 'required|exists:roles,name',
+            'unidade'  => 'required|numeric|exists:unidades,id',
+            'setor_id' => 'required|numeric|exists:setores,id',
         ]);
 
-
-        if (!$request->user()->can('store', [User::class, $request->funcao])) {
+        if (! $request->user()->can('store', [User::class, $request->funcao])) {
             return response()->json(['message' => 'Não autorizado a criar este tipo de usuário.'], 403);
         }
         $user = User::create([
-            'user' => $request->user,
-            'password' => Hash::make($request->senha),
-            'unidade_id' => (int)$request->unidade,
-            'setor_id' => (int)$request->setor_id,
+            'user'       => $request->user,
+            'password'   => Hash::make($request->senha),
+            'unidade_id' => (int) $request->unidade,
+            'setor_id'   => (int) $request->setor_id,
 
         ]);
         $user->assignRole($request->funcao);
@@ -125,8 +123,8 @@ class UserController extends Controller
 
         return response()->json([
             'message' => 'Usuário criado com sucesso.',
-             'user' => $user
-            ], 201);
+            'user'    => $user,
+        ], 201);
     }
 
     /**
@@ -151,26 +149,26 @@ class UserController extends Controller
         Gate::authorize('update', $userToUpdate);
 
         $request->validate([
-            'user' => 'sometimes|string|unique:users,user,' . $userToUpdate->id,
-            'senha' => 'sometimes|string|min:8',
-            'funcao' => 'sometimes|exists:roles,name',
-            'unidade' => 'sometimes|numeric|exists:unidades,id',
-            'setor_id' => 'sometimes|exists:setores,id'
+            'user'     => 'sometimes|string|unique:users,user,' . $userToUpdate->id,
+            'senha'    => 'sometimes|string|min:8',
+            'funcao'   => 'sometimes|exists:roles,name',
+            'unidade'  => 'sometimes|numeric|exists:unidades,id',
+            'setor_id' => 'sometimes|exists:setores,id',
         ]);
 
         $data = [
-            'user' => $request->user,
+            'user'       => $request->user,
             'unidade_id' => $request->unidade,
-            'setor_id' => $request->setor_id,
+            'setor_id'   => $request->setor_id,
         ];
 
-        if(!empty($request->senha)){
+        if (! empty($request->senha)) {
             $data['password'] = Hash::make($request->senha);
         }
 
         $userToUpdate->update($data);
 
-        if(isset($request->funcao)){
+        if (isset($request->funcao)) {
             $userToUpdate->syncRoles($request->funcao);
         }
 
@@ -178,8 +176,8 @@ class UserController extends Controller
 
         return response()->json([
             'message' => 'Usuário atualizado com sucesso',
-             'user' => $userToUpdate
-            ], 200);
+            'user'    => $userToUpdate,
+        ], 200);
     }
 
     /**
@@ -193,7 +191,7 @@ class UserController extends Controller
         $userToDelete->delete();
 
         return response()->json([
-            'message' => 'Usuário excluído com sucesso.'
+            'message' => 'Usuário excluído com sucesso.',
         ], 200);
     }
 
@@ -209,18 +207,18 @@ class UserController extends Controller
         $user = $request->user();
 
         $request->validate([
-            'user' => 'sometimes|string|unique:users,user,' . $user->id,
-            'senha' => 'sometimes|string|min:3',
+            'user'      => 'sometimes|string|unique:users,user,' . $user->id,
+            'senha'     => 'sometimes|string|min:3',
             'novaSenha' => 'nullable|string|min:8',
         ]);
 
         if ($request->filled('novaSenha')) {
-            if(!$request->filled('senha')) {
+            if (! $request->filled('senha')) {
                 throw ValidationException::withMessages([
                     'senhaAtual' => 'Senha atual necessária para essa alteraçao.',
                 ]);
             }
-            if (!Hash::check($request->senha, $user->password)) {
+            if (! Hash::check($request->senha, $user->password)) {
                 throw ValidationException::withMessages([
                     'senhaAtual' => 'Senha atual incorreta.',
                 ]);
@@ -242,7 +240,7 @@ class UserController extends Controller
 
         $user = $request->user();
 
-        if (!Hash::check($request->senha, $user->password)) {
+        if (! Hash::check($request->senha, $user->password)) {
             return response()->json(['message' => 'Senha incorreta.'], 403);
         }
 
