@@ -1,16 +1,14 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use App\Events\JustificativaCriada;
 use App\Events\JustificativaStatusChanged;
-use App\Models\User;
-use App\Notifications\JustificativaNotification;
-use Illuminate\Support\Facades\Notification;
 use App\Http\Resources\JustificativaListResource;
 use App\Http\Resources\JustificativaResource;
 use App\Models\Funcionario;
 use App\Models\Justificativa;
+use App\Models\User;
+use App\Notifications\JustificativaNotification;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -31,13 +29,13 @@ class JustificativaController extends Controller
     public function index(Request $request)
     {
         // Inicia a query com joins
-        $user = auth()->user();
+        $user  = auth()->user();
         $query = Justificativa::query()
 
-        ->join('funcionarios', 'justificativas.funcionario_id', '=', 'funcionarios.id')
-        ->join('unidades', 'funcionarios.unidade_id', '=', 'unidades.id')
-        ->join('localidades', 'unidades.localidade_id', '=', 'localidades.id')
-        ->selectRaw('
+            ->join('funcionarios', 'justificativas.funcionario_id', '=', 'funcionarios.id')
+            ->join('unidades', 'funcionarios.unidade_id', '=', 'unidades.id')
+            ->join('localidades', 'unidades.localidade_id', '=', 'localidades.id')
+            ->selectRaw('
             MIN(justificativas.id) as id,
             justificativas.funcionario_id,
             MAX(justificativas.motivo) as motivo,
@@ -50,20 +48,19 @@ class JustificativaController extends Controller
             unidades.nome as unidade,
             localidades.setor_id as setor_it
         ')
-        ->groupBy(
-            'justificativas.funcionario_id',
-            'funcionarios.nome',
-            'unidades.nome',
-            'justificativas.data_inicio',
-            'justificativas.data_fim',
-            'justificativas.motivo',
-            'justificativas.status',
-            'justificativas.updated_at'
-        );
+            ->groupBy(
+                'justificativas.funcionario_id',
+                'funcionarios.nome',
+                'unidades.nome',
+                'justificativas.data_inicio',
+                'justificativas.data_fim',
+                'justificativas.motivo',
+                'justificativas.status',
+            );
 
         $query->where('setor_id', $user->setor_id);
 
-        if (!$user->hasAnyRole(['admin', 'super admin'])) {
+        if (! $user->hasAnyRole(['admin', 'super admin'])) {
             $query->where('funcionarios.unidade_id', $user->unidade_id);
         }
 
@@ -76,10 +73,10 @@ class JustificativaController extends Controller
         });
 
         // Filtro por unidade
-        $query->when($request->unidade, function ($query, $unidade){
+        $query->when($request->unidade, function ($query, $unidade) {
             $query->where('unidades.id', $unidade);
         });
-        if(!$request->order) {
+        if (! $request->order) {
 
             $query->orderBy('justificativas.updated_at', 'desc');
         }
@@ -94,7 +91,7 @@ class JustificativaController extends Controller
                 'unidade'     => 'unidades.nome',
                 'data_inicio' => 'justificativas.data_inicio',
                 'data_fim'    => 'justificativas.data_fim',
-                'status'      => 'status'
+                'status'      => 'status',
             ];
 
             if (isset($columnsMap[$sortBy])) {
@@ -125,7 +122,6 @@ class JustificativaController extends Controller
         ]);
     }
 
-
     /**
      * Store a newly created resource in storage.
      */
@@ -138,10 +134,10 @@ class JustificativaController extends Controller
 
         $validated = $request->validate([
             'funcionario_id' => 'required|exists:funcionarios,id',
-            'motivo' => 'required|string',
-            'anexo' => 'nullable|file|mimes:jpg,jpeg,png,pdf,docx',
-            'data_inicio' => 'required|date',
-            'data_fim' => 'nullable|after_or_equal:data_inicio|date',
+            'motivo'         => 'required|string',
+            'anexo'          => 'nullable|file|mimes:jpg,jpeg,png,pdf,docx',
+            'data_inicio'    => 'required|date',
+            'data_fim'       => 'nullable|after_or_equal:data_inicio|date',
         ]);
 
         if ($request->hasFile('anexo')) {
@@ -149,35 +145,33 @@ class JustificativaController extends Controller
         }
 
         $dataInicio = Carbon::create($validated['data_inicio']);
-        $dataFim = isset($validated['data_fim']) ? Carbon::create( $validated['data_fim']) : $dataInicio;
+        $dataFim    = isset($validated['data_fim']) ? Carbon::create($validated['data_fim']) : $dataInicio;
 
-
-        $datas = $dataInicio->daysUntil($dataFim)->map(function($data) use ($validated, $dataInicio, $dataFim){
+        $datas = $dataInicio->daysUntil($dataFim)->map(function ($data) use ($validated, $dataInicio, $dataFim) {
             return [
-                'data' => $data->toDateString(),
+                'data'           => $data->toDateString(),
                 'funcionario_id' => $validated['funcionario_id'],
-                'data_inicio' => $dataInicio,
-                'data_fim' => $dataFim,
-                'motivo' => $validated['motivo'],
-                'anexo' => $validated['anexo'] ?? null,
-                'status' => 'pendente',
-                'created_at' => now(),
-                'updated_at' => now(),
+                'data_inicio'    => $dataInicio,
+                'data_fim'       => $dataFim,
+                'motivo'         => $validated['motivo'],
+                'anexo'          => $validated['anexo'] ?? null,
+                'status'         => 'pendente',
+                'created_at'     => now(),
+                'updated_at'     => now(),
             ];
         });
 
         Justificativa::insert(collect($datas)->toArray());
 
         $justificativa = Justificativa::where('funcionario_id', $validated['funcionario_id'])
-        ->whereDate('data_inicio', $dataInicio)
-        ->whereDate('data_fim', $dataFim)
-        ->first();
+            ->whereDate('data_inicio', $dataInicio)
+            ->whereDate('data_fim', $dataFim)
+            ->first();
 
-
-        $funcionario = Funcionario::find($validated['funcionario_id']);
-        $setorFuncionario  = $funcionario->unidade->localidade->setor_id;
-        $adminUsers = User::role(['admin'])->where('setor_id', $setorFuncionario)->get();
-        $notificacao = new JustificativaNotification(
+        $funcionario      = Funcionario::find($validated['funcionario_id']);
+        $setorFuncionario = $funcionario->unidade->localidade->setor_id;
+        $adminUsers       = User::role(['admin'])->where('setor_id', $setorFuncionario)->get();
+        $notificacao      = new JustificativaNotification(
             $justificativa,
             'Nova Justificativa',
             "O funcionário {$funcionario->nome} enviou uma nova justificativa.",
@@ -205,35 +199,33 @@ class JustificativaController extends Controller
 
     public function show($id)
     {
-            $justificativa = Justificativa::with('funcionario')->findOrFail($id);
+        $justificativa = Justificativa::with('funcionario')->findOrFail($id);
 
-            Gate::authorize('show', $justificativa);
+        Gate::authorize('show', $justificativa);
 
-
-            $justificativa = new JustificativaResource($justificativa);
-            return response()->json($justificativa, 200);
+        $justificativa = new JustificativaResource($justificativa);
+        return response()->json($justificativa, 200);
     }
-
 
 /**
  * Update the specified resource in storage.
  */
     public function update(Request $request, string $id)
     {
-        $user = auth()->user();
+        $user          = auth()->user();
         $justificativa = Justificativa::findOrFail($id);
 
-        if (!$user->hasAnyRole(['admin', 'super admin']) && isset($request->status)) {
-            return response()->json(['message' => 'Ação não autorizada'],403);
+        if (! $user->hasAnyRole(['admin', 'super admin']) && isset($request->status)) {
+            return response()->json(['message' => 'Ação não autorizada'], 403);
         }
 
-         // Regras de validação condicionais
+        // Regras de validação condicionais
         $rules = [
             'motivo' => 'nullable|string',
             'status' => 'nullable|in:pendente,aprovado,recusado',
         ];
 
-        if($request->status == 'recusado') {
+        if ($request->status == 'recusado') {
             $rules['motivo_recusa'] = 'required|string';
         }
 
@@ -286,15 +278,14 @@ class JustificativaController extends Controller
         if (isset($validated['status']) && in_array($validated['status'], ['aprovado', 'recusado'])) {
             $justificativa = Justificativa::with('funcionario')->findOrFail($id);
 
-
-            $unidadeId = $justificativa->funcionario->unidade_id;
+            $unidadeId   = $justificativa->funcionario->unidade_id;
             $usersInUnit = User::where('unidade_id', $unidadeId)
-                ->whereDoesntHave('roles', function($query) {
+                ->whereDoesntHave('roles', function ($query) {
                     $query->whereIn('name', ['admin', 'super admin']);
                 })->get();
 
             $statusText = $validated['status'] === 'aprovado' ? 'aprovada' : 'recusada';
-            $icon = $validated['status'] === 'aprovado' ? 'mdi-check-circle' : 'mdi-close-circle';
+            $icon       = $validated['status'] === 'aprovado' ? 'mdi-check-circle' : 'mdi-close-circle';
 
             $notificacao = new JustificativaNotification(
                 $justificativa,
@@ -319,7 +310,6 @@ class JustificativaController extends Controller
                 ))->toOthers();
             }
         }
-
 
         return response()->json([
             'message' => 'Justificativa atualizada com sucesso',
@@ -357,7 +347,7 @@ class JustificativaController extends Controller
         }
 
         return response()->json([
-            'message' => 'Justificativa excluída com sucesso'
+            'message' => 'Justificativa excluída com sucesso',
         ], 200);
     }
 }
