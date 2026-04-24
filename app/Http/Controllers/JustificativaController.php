@@ -36,18 +36,19 @@ class JustificativaController extends Controller
             ->join('unidades', 'funcionarios.unidade_id', '=', 'unidades.id')
             ->join('localidades', 'unidades.localidade_id', '=', 'localidades.id')
             ->selectRaw('
-            MIN(justificativas.id) as id,
-            justificativas.funcionario_id,
-            MAX(justificativas.motivo) as motivo,
-            MAX(justificativas.anexo) as anexo,
-            MAX(justificativas.status) as status,
-            MAX(justificativas.created_at) as criado,
-            justificativas.data_inicio,
-            justificativas.data_fim,
-            funcionarios.nome as funcionario,
-            unidades.nome as unidade,
-            localidades.setor_id as setor_it
-        ')
+                MIN(justificativas.id) as id,
+                justificativas.funcionario_id,
+                MAX(justificativas.motivo) as motivo,
+                MAX(justificativas.anexo) as anexo,
+                MAX(justificativas.status) as status,
+                MAX(justificativas.created_at) as criado,
+                MAX(justificativas.updated_at) as atualizado,
+                justificativas.data_inicio,
+                justificativas.data_fim,
+                funcionarios.nome as funcionario,
+                unidades.nome as unidade,
+                localidades.setor_id as setor_it
+            ')
             ->groupBy(
                 'justificativas.funcionario_id',
                 'funcionarios.nome',
@@ -56,6 +57,7 @@ class JustificativaController extends Controller
                 'justificativas.data_fim',
                 'justificativas.motivo',
                 'justificativas.status',
+                'justificativas.updated_at'
             );
 
         $query->where('setor_id', $user->setor_id);
@@ -78,7 +80,7 @@ class JustificativaController extends Controller
         });
         if (! $request->order) {
 
-            $query->orderBy('justificativas.updated_at', 'desc');
+            $query->orderBy('atualizado', 'desc');
         }
         // Ordenação
         $order = $request->input('order', 'asc');
