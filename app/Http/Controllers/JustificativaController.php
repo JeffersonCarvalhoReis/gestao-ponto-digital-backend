@@ -47,7 +47,7 @@ class JustificativaController extends Controller
                 justificativas.data_fim,
                 funcionarios.nome as funcionario,
                 unidades.nome as unidade,
-                localidades.setor_id as setor_it
+                localidades.setor_id as setor_id
             ')
             ->groupBy(
                 'justificativas.funcionario_id',
@@ -57,7 +57,6 @@ class JustificativaController extends Controller
                 'justificativas.data_fim',
                 'justificativas.motivo',
                 'justificativas.status',
-                'justificativas.updated_at'
             );
 
         $query->where('setor_id', $user->setor_id);
