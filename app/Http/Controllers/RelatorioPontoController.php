@@ -163,6 +163,7 @@ class RelatorioPontoController extends Controller
         } else {
             $query->where('unidade_id', $unidadeId);
         }
+        $query->where('status', true);
 
         return $query->get();
     }
