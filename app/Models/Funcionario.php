@@ -55,4 +55,35 @@ class Funcionario extends Model
     {
         return $this->hasMany(Feria::class);
     }
+
+    public function escalas()
+    {
+        return $this->hasMany(Escala::class);
+    }
+
+    public function bancoHorasMensal()
+    {
+        return $this->hasMany(BancoHorasMensal::class);
+    }
+
+    /**
+     * O funcionário não possui setor_id direto: o setor é derivado da cadeia
+     * funcionario -> unidade -> localidade -> setor. Use com eager loading
+     * (::with('unidade.localidade.setor')) para evitar N+1.
+     */
+    public function getSetorAttribute()
+    {
+        return $this->unidade?->localidade?->setor;
+    }
+
+    /**
+     * Scope para filtrar funcionários por setor, navegando pela cadeia
+     * unidade -> localidade -> setor.
+     */
+    public function scopeDoSetor($query, int $setorId)
+    {
+        return $query->whereHas('unidade.localidade', function ($q) use ($setorId) {
+            $q->where('setor_id', $setorId);
+        });
+    }
 }

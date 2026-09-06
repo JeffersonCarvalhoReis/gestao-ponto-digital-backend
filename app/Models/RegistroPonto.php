@@ -24,9 +24,11 @@ class RegistroPonto extends Model
             $registro->data_local = now()->timezone('America/Sao_Paulo')->format('Y-m-d');
         });
 
-        static::updating(function ($registro) {
-            $registro->data_local = now()->timezone('America/Sao_Paulo')->format('Y-m-d');
-        });
+        // IMPORTANTE: "data_local" representa o dia em que o turno começou
+        // (dia da entrada) e NÃO pode ser sobrescrita ao registrar a saída.
+        // Um plantão pode ser aberto num dia e encerrado depois da meia-noite;
+        // se recalculássemos data_local no update, o registro "pularia" para
+        // o dia seguinte e corromperia o banco de horas e os relatórios.
     }
 
     public function funcionario()

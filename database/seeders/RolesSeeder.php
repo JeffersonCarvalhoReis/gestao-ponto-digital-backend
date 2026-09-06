@@ -65,7 +65,16 @@ class RolesSeeder extends Seeder
                'visualizar_dias_nao_uteis',
                'atualizar_dias_nao_uteis',
                'excluir_dias_nao_uteis',
-               'registrar_biometria'
+               'registrar_biometria',
+               'registrar_turnos',
+               'visualizar_turnos',
+               'editar_turnos',
+               'excluir_turnos',
+               'registrar_escalas',
+               'visualizar_escalas',
+               'excluir_escalas',
+               'visualizar_banco_horas',
+               'fechar_banco_horas',
 
             ]);
         });
@@ -89,7 +98,13 @@ class RolesSeeder extends Seeder
                 'visualizar_justificativas',
                 'gerar_relatorios',
                 'visualizar_cargos',
-                'registrar_biometria'
+                'registrar_biometria',
+                'visualizar_turnos',
+                'registrar_escalas',
+                'visualizar_escalas',
+                'excluir_escalas',
+                'visualizar_banco_horas',
+                'fechar_banco_horas',
             ]);
         });
 

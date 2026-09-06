@@ -10,41 +10,40 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Session\TokenMismatchException;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 use Spatie\Permission\Middleware\RoleMiddleware;
+use Spatie\Permission\Middleware\RoleOrPermissionMiddleware;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use \App\Http\Middleware\EnsureEmailIsVerified;
+use \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
-        web: __DIR__.'/../routes/web.php',
-        api: __DIR__.'/../routes/api.php',
-        commands: __DIR__.'/../routes/console.php',
-        channels: __DIR__.'/../routes/channels.php',
+        web: __DIR__ . '/../routes/web.php',
+        api: __DIR__ . '/../routes/api.php',
+        commands: __DIR__ . '/../routes/console.php',
+        channels: __DIR__ . '/../routes/channels.php',
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->api(prepend: [
-            \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
+            EnsureFrontendRequestsAreStateful::class,
         ]);
 
         $middleware->alias([
-            'verified' => \App\Http\Middleware\EnsureEmailIsVerified::class,
-        ]);
-
-        $middleware->alias([
-            'role' => RoleMiddleware::class,
-        ]);
-        $middleware->alias([
-            'permission' => PermissionMiddleware::class,
+            'verified'           => EnsureEmailIsVerified::class,
+            'role'               => RoleMiddleware::class,
+            'permission'         => PermissionMiddleware::class,
+            'role_or_permission' => RoleOrPermissionMiddleware::class,
         ]);
 
         $middleware->statefulApi();
     })
     ->withExceptions(function (Exceptions $exceptions) {
         $exceptions->render(function (NotFoundHttpException $e) {
-            if($e->getPrevious() instanceof ModelNotFoundException){
+            if ($e->getPrevious() instanceof ModelNotFoundException) {
 
                 return response()->json([
-                    'message' => 'O recurso solicitado não foi encontrado.'
+                    'message' => 'O recurso solicitado não foi encontrado.',
                 ], 404);
             }
         });
@@ -52,8 +51,8 @@ return Application::configure(basePath: dirname(__DIR__))
 
             if ($e instanceof AuthenticationException) {
                 return response()->json([
-                    'message' => 'Sua sessão expirou. Por favor, faça login novamente para continuar'
-            ], 401);
+                    'message' => 'Sua sessão expirou. Por favor, faça login novamente para continuar',
+                ], 401);
             }
 
         });
@@ -62,7 +61,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
             if ($e instanceof TokenMismatchException) {
                 return response()->json([
-                    'message' => 'Sua sessão expirou. Atualize a página e tente novamente.'
+                    'message' => 'Sua sessão expirou. Atualize a página e tente novamente.',
                 ], 419);
             }
 
@@ -81,7 +80,7 @@ return Application::configure(basePath: dirname(__DIR__))
             if ($e instanceof BiometricException) {
                 return response()->json([
                     'sucesso' => false,
-                    'message' => $e->getMessage()
+                    'message' => $e->getMessage(),
                 ], 400);
             }
         });
@@ -90,7 +89,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 // Verifica se o erro é de restrição de chave estrangeira
                 if (str_contains($e->getMessage(), 'Integrity constraint violation')) {
                     return response()->json([
-                        'message' => 'Este registro não pode ser excluído porque está relacionado a outros dados.'
+                        'message' => 'Este registro não pode ser excluído porque está relacionado a outros dados.',
                     ], 400);
                 }
             }

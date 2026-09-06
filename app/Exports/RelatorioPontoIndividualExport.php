@@ -14,10 +14,16 @@ use Maatwebsite\Excel\Events\AfterSheet;
 class RelatorioPontoIndividualExport implements FromArray, WithHeadings, WithTitle, WithStyles, WithEvents
 {
     protected array $dados;
+    protected ?array $bancoHoras;
 
     public function __construct(array $dados)
     {
         $this->dados = $dados;
+        // Opcional: quando o front-end envia 'banco_horas' junto (mesmo
+        // formato retornado por /relatorio para o funcionário), a aba
+        // individual também mostra o resumo do mês (previsto/realizado/
+        // extra/saldo). Se não vier, a exportação segue igual a antes.
+        $this->bancoHoras = $dados['banco_horas'] ?? null;
     }
 
     public function array(): array
@@ -155,8 +161,64 @@ class RelatorioPontoIndividualExport implements FromArray, WithHeadings, WithTit
                 $sheet->getPageMargins()->setRight(0.2);
                 $sheet->getPageMargins()->setLeft(0.2);
                 $sheet->getPageMargins()->setBottom(0.25);
+
+                $this->escreverBlocoBancoHoras($sheet, $lastRow);
             },
         ];
+    }
+
+    /**
+     * Escreve, logo abaixo da tabela de dias, um pequeno bloco com o resumo
+     * do banco de horas do mês (previsto x realizado x extra x saldo).
+     * Só é escrito se o front-end enviou 'banco_horas' no payload.
+     */
+    private function escreverBlocoBancoHoras($sheet, int $lastRow): void
+    {
+        if (! $this->bancoHoras) {
+            return;
+        }
+
+        $linhaTitulo = $lastRow + 2;
+        $linhaCabecalho = $linhaTitulo + 1;
+        $linhaValores = $linhaCabecalho + 1;
+
+        $sheet->mergeCells("A{$linhaTitulo}:H{$linhaTitulo}");
+        $sheet->setCellValue("A{$linhaTitulo}", 'Banco de Horas do Mês (o saldo não acumula para o mês seguinte)');
+        $sheet->getStyle("A{$linhaTitulo}")->getFont()->setBold(true)->setSize(12);
+
+        $sheet->setCellValue("A{$linhaCabecalho}", 'Previsto (Escala)');
+        $sheet->setCellValue("C{$linhaCabecalho}", 'Realizado (Ponto)');
+        $sheet->setCellValue("E{$linhaCabecalho}", 'Extra (Dobra/Viagem)');
+        $sheet->setCellValue("G{$linhaCabecalho}", 'Saldo do Mês');
+
+        $sheet->setCellValue("A{$linhaValores}", $this->bancoHoras['previsto_formatado'] ?? '00:00');
+        $sheet->setCellValue("C{$linhaValores}", $this->bancoHoras['realizado_formatado'] ?? '00:00');
+        $sheet->setCellValue("E{$linhaValores}", $this->bancoHoras['extra_formatado'] ?? '00:00');
+        $sheet->setCellValue("G{$linhaValores}", $this->bancoHoras['saldo_formatado'] ?? '00:00');
+
+        foreach (['A', 'C', 'E', 'G'] as $coluna) {
+            $sheet->getStyle("{$coluna}{$linhaCabecalho}")->getFont()->setBold(true);
+        }
+
+        $rangeBloco = "A{$linhaCabecalho}:H{$linhaValores}";
+        $sheet->getStyle($rangeBloco)->applyFromArray([
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+                    'color' => ['rgb' => '000000'],
+                ],
+            ],
+            'alignment' => [
+                'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+                'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
+            ],
+        ]);
+
+        $saldoFormatado = $this->bancoHoras['saldo_formatado'] ?? '00:00';
+        if (str_starts_with($saldoFormatado, '-')) {
+            $sheet->getStyle("G{$linhaValores}")->getFont()->getColor()->setARGB('CC0000');
+            $sheet->getStyle("G{$linhaValores}")->getFont()->setBold(true);
+        }
     }
 }
 

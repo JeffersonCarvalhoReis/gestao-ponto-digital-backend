@@ -7,7 +7,11 @@ use Illuminate\Database\Eloquent\Model;
 class Setor extends Model
 {
   protected $table = 'setores';
-  protected $fillable = ['nome'];
+  protected $fillable = ['nome', 'bloquear_ponto_sem_biometria'];
+
+  protected $casts = [
+      'bloquear_ponto_sem_biometria' => 'boolean',
+  ];
 
   public function users()
   {
@@ -17,6 +21,11 @@ class Setor extends Model
   public function localidades()
   {
       return $this->hasMany(Localidade::class);
+  }
+
+  public function tiposTurno()
+  {
+      return $this->hasMany(TipoTurno::class);
   }
 
 }

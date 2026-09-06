@@ -10,6 +10,7 @@ use App\Models\Justificativa;
 use App\Models\Recesso;
 use App\Models\RegistroPonto;
 use App\Models\Unidade;
+use App\Services\BancoHorasService;
 use App\Services\DiaNaoUtilService;
 use App\Services\RelatorioService;
 use Carbon\Carbon;
@@ -22,11 +23,13 @@ class RelatorioPontoController extends Controller
 {
     protected $diaNaoUtilService;
     protected $relatorioService;
+    protected $bancoHorasService;
 
-    public function __construct(DiaNaoUtilService $diaNaoUtilService, RelatorioService $relatorioService)
+    public function __construct(DiaNaoUtilService $diaNaoUtilService, RelatorioService $relatorioService, BancoHorasService $bancoHorasService)
     {
         $this->diaNaoUtilService = $diaNaoUtilService;
         $this->relatorioService  = $relatorioService;
+        $this->bancoHorasService = $bancoHorasService;
         $this->middleware('permission:gerar_relatorios')->only('gerarRelatorio');
     }
 
@@ -38,8 +41,11 @@ class RelatorioPontoController extends Controller
         $mes       = $request->mes;
         $ano       = $request->ano;
 
-        $funcionarios = $this->obterFuncionarios($unidadeId);
-        $periodo      = $this->definirPeriodoMes($ano, $mes);
+        $funcionarios = $this->obterFuncionarios($unidadeId)
+            ->sortBy('nome')
+            ->values();
+
+        $periodo = $this->definirPeriodoMes($ano, $mes);
 
         $this->preencherDiasNaoUteis();
 
@@ -93,7 +99,26 @@ class RelatorioPontoController extends Controller
         }
         $linhasExportacaoSemanais = array_values($linhasExportacaoSemanais);
 
-        return Excel::download(new RelatorioPontoExport(collect($linhasExportacao), collect($linhasExportacaoSemanais), $ano, $mes, $unidade->nome), 'relatorio_ponto.xlsx');
+        // Monta as linhas da aba de banco de horas (previsto x realizado x extra x saldo)
+        $mesReferencia    = Carbon::create($ano, $mes, 1)->toDateString();
+        $resumoBancoHoras = $this->bancoHorasService->calcularResumoMesEmLote(
+            $funcionarios->pluck('id')->toArray(),
+            $mesReferencia
+        );
+
+        $linhasBancoHoras = $funcionarios->map(function ($funcionario) use ($resumoBancoHoras) {
+            $resumo = $resumoBancoHoras[$funcionario->id] ?? null;
+
+            return [
+                'funcionario' => $funcionario->nome,
+                'previsto'    => $resumo['previsto_formatado'] ?? '00:00',
+                'realizado'   => $resumo['realizado_formatado'] ?? '00:00',
+                'extra'       => $resumo['extra_formatado'] ?? '00:00',
+                'saldo'       => $resumo['saldo_formatado'] ?? '00:00',
+            ];
+        })->values();
+
+        return Excel::download(new RelatorioPontoExport(collect($linhasExportacao), collect($linhasExportacaoSemanais), collect($linhasBancoHoras), $ano, $mes, $unidade->nome), 'relatorio_ponto.xlsx');
     }
 
     /**
@@ -128,12 +153,37 @@ class RelatorioPontoController extends Controller
             $dadosRelatorio
         );
 
+        // Anexa o resumo do banco de horas do mês (previsto x realizado x
+        // extra x saldo), calculado com base na escala de plantão e no ponto.
+        $mesReferencia    = Carbon::create($ano, $mes, 1)->toDateString();
+        $resumoBancoHoras = $this->bancoHorasService->calcularResumoMesEmLote(
+            $funcionarios->pluck('id')->toArray(),
+            $mesReferencia
+        );
+
+        $resultado['banco_horas'] = $funcionarios->mapWithKeys(function ($funcionario) use ($resumoBancoHoras) {
+            return [$funcionario->nome => $resumoBancoHoras[$funcionario->id] ?? null];
+        });
+
         return response()->json($resultado, 200);
     }
 
     public function gerarRelatorioIndividual(Request $request)
     {
         $dados = $request->all();
+
+        // Se o front-end informar funcionario_id + mes + ano, calculamos o
+        // banco de horas no servidor (fonte única de verdade) em vez de
+        // depender de o front já ter enviado o resumo pronto. Se o front
+        // já mandar 'banco_horas' diretamente, isso é respeitado também
+        // (ver RelatorioPontoIndividualExport).
+        if (! isset($dados['banco_horas']) && $request->filled(['funcionario_id', 'mes', 'ano'])) {
+            $mesReferencia        = Carbon::create($request->ano, $request->mes, 1)->toDateString();
+            $dados['banco_horas'] = $this->bancoHorasService->calcularResumoMes(
+                (int) $request->funcionario_id,
+                $mesReferencia
+            );
+        }
 
         return Excel::download(new RelatorioPontoIndividualExport($dados), 'relatorio_ponto.xlsx');
     }
