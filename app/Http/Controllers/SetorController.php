@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use App\Http\Resources\SetorResource;
@@ -21,20 +20,21 @@ class SetorController extends Controller
     {
         $query = Setor::query();
 
-        $query->when($request->nome, function($query, $nome) {
-            $query->where('nome', 'like',"%$nome%");
+        $query->when($request->nome, function ($query, $nome) {
+            $query->where('nome', 'like', "%$nome%");
         });
+
         $perPage = $request->input('per_page', 10);
-        if($perPage == -1) {
+        if ($perPage == -1) {
             $perPage = Setor::count();
         }
 
-        if(!$request->order) {
+        if (! $request->order) {
             $query->orderBy('updated_at', 'desc');
         }
 
         $order = $request->order;
-        $query->when( $request->sortBy, function ($query, $sortBy) use ($order){
+        $query->when($request->sortBy, function ($query, $sortBy) use ($order) {
             $query->orderBy($sortBy, $order);
         });
 
@@ -46,13 +46,12 @@ class SetorController extends Controller
             'data' => $setores,
             'meta' => [
                 'current_page' => $setoresPaginado->currentPage(),
-                'last_page' => $setoresPaginado->lastPage(),
-                'per_page' => $setoresPaginado->perPage(),
-                'total' => $setoresPaginado->total(),
+                'last_page'    => $setoresPaginado->lastPage(),
+                'per_page'     => $setoresPaginado->perPage(),
+                'total'        => $setoresPaginado->total(),
             ],
         ], 200);
     }
-
 
     /**
      * Store a newly created resource in storage.
@@ -60,7 +59,7 @@ class SetorController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-           'nome' => 'required|min:2|string|unique:setores'
+            'nome' => 'required|min:2|string|unique:setores',
         ]);
 
         Setor::create($data);
@@ -95,7 +94,7 @@ class SetorController extends Controller
 
         return response()->json([
             'message' => 'Setor atualizado com sucesso',
-            'Setor' => $setor
+            'Setor'   => $setor,
         ], 200);
     }
 
@@ -109,7 +108,7 @@ class SetorController extends Controller
         $setor->delete();
 
         return response()->json([
-            'message' => 'Setor excluído com sucesso.'
+            'message' => 'Setor excluído com sucesso.',
         ], 200);
     }
 }
