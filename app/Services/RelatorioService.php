@@ -19,6 +19,10 @@ class RelatorioService
         $relatorioSemanas = [];
         $relatorioDias    = [];
 
+        $funcionarios = $funcionarios
+            ->sortBy('nome')
+            ->values();
+
         foreach ($funcionarios as $funcionario) {
             $resultado = $this->processarDadosFuncionario(
                 $funcionario,
@@ -27,9 +31,7 @@ class RelatorioService
             );
 
             $relatorioSemanas[$funcionario->nome] = $resultado['horasPorSemana'];
-
-            $relatorioDias[$funcionario->nome] = $resultado['relatorioDias'];
-
+            $relatorioDias[$funcionario->nome]    = $resultado['relatorioDias'];
         }
 
         return [
@@ -37,7 +39,6 @@ class RelatorioService
             'relatorio_dias'    => $relatorioDias,
         ];
     }
-
     /**
      * Processa os dados de um funcionário específico
      *

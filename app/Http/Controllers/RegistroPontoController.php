@@ -12,10 +12,19 @@ use Illuminate\Http\Request;
 
 class RegistroPontoController extends Controller
 {
+    /**
+     * Limite máximo (em horas) admitido entre a entrada e a saída de um
+     * mesmo turno. Existem plantões legítimos de até 24h, então o limite
+     * fica acima disso apenas como uma rede de segurança contra erro ou
+     * fraude (ex: esquecer de bater a saída por dias) — quando estourado,
+     * a saída não é fechada automaticamente e um administrador precisa
+     * corrigir o registro manualmente.
+     */
+    private const MAX_HORAS_TURNO = 30;
 
     public function buscarFuncionarioBiometria(Request $request) {
 
-
+        $acao = $this->validarAcao($request->input('acao'));
 
         $biometria = new BiometriaController;
 
@@ -24,60 +33,122 @@ class RegistroPontoController extends Controller
 
         if($sucesso) {
             $funcionarioId = $resposta->original['funcionario'];
-            return $this->registrarPonto($funcionarioId, $sucesso );
+            return $this->registrarPonto($funcionarioId, $sucesso, $acao);
         } else {
             return response()->json(['message' => 'Funcionário não encontrado'], 404);
         }
     }
 
-    public function buscarFuncionarioManualmente(string $funcionario) {
+    public function buscarFuncionarioManualmente(Request $request, string $funcionario) {
 
-        $funcionarioExiste = Funcionario::where('id', $funcionario)->first();
+        $acao = $this->validarAcao($request->input('acao'));
 
-        if($funcionarioExiste) {
-            return $this->registrarPonto($funcionario, false );
-        } else {
+        $funcionarioExiste = Funcionario::with('unidade.localidade.setor')->where('id', $funcionario)->first();
+
+        if(! $funcionarioExiste) {
             return response()->json(['message' => 'Funcionário não encontrado'], 404);
         }
+
+        $setor = $funcionarioExiste->unidade?->localidade?->setor;
+
+        if ($setor && $setor->bloquear_ponto_sem_biometria) {
+            return response()->json([
+                'message' => 'O registro de ponto sem biometria está desabilitado para este setor.',
+            ], 403);
+        }
+
+        return $this->registrarPonto($funcionario, false, $acao);
     }
 
-   public function registrarPonto(string $funcionarioId, bool $biometria)
+    /**
+     * Garante que a ação recebida do front-end é sempre explícita
+     * ("entrada" ou "saida"). Isso evita que o sistema tenha que "adivinhar"
+     * a intenção do funcionário a partir do último registro em aberto —
+     * adivinhação que, historicamente, é a principal fonte de erro/fraude
+     * (ex: bater duas entradas seguidas, ou não conseguir bater a saída
+     * depois da meia-noite porque o sistema achava que já era "outro dia").
+     */
+    private function validarAcao(?string $acao): string
+    {
+        if (! in_array($acao, ['entrada', 'saida'], true)) {
+            abort(response()->json([
+                'message' => 'Ação inválida. Selecione "Registrar Entrada" ou "Registrar Saída".',
+            ], 422));
+        }
+
+        return $acao;
+    }
+
+   public function registrarPonto(string $funcionarioId, bool $biometria, string $acao)
    {
-
-
-    $registroAberto = RegistroPonto::where('funcionario_id', $funcionarioId)
-        ->whereNull('hora_saida')
-        ->orderBy('data_local', 'desc')->first();
     $funcionario = Funcionario::find($funcionarioId);
+
+    if (! $funcionario) {
+        return response()->json(['message' => 'Funcionário não encontrado'], 404);
+    }
+
     $setorId = $funcionario->unidade->localidade->setor_id;
 
-    if ($registroAberto) {
+    // Busca o turno em aberto (entrada sem saída) independente do dia em
+    // que a entrada ocorreu, para permitir fechar a saída depois da
+    // meia-noite sem "perder" o registro do dia anterior.
+    $registroAberto = RegistroPonto::where('funcionario_id', $funcionarioId)
+        ->whereNull('hora_saida')
+        ->orderByDesc('id')
+        ->first();
 
-        $horaEntrada = Carbon::parse($registroAberto->data_local);
-
-        if ($horaEntrada->isToday()) {
-            $registroAberto->update(['hora_saida' => Carbon::now()]);
-            broadcast(new NovoRegistroPonto($registroAberto, $setorId))->toOthers();
+    if ($acao === 'entrada') {
+        if ($registroAberto) {
             return response()->json([
-                'message' => 'Hora de saída registrada com sucesso!',
-                 'registro' => $registroAberto
-                ], 200);
-             }
+                'message' => 'Já existe uma entrada em aberto sem saída registrada. Registre a saída antes de uma nova entrada.',
+                'registro' => $registroAberto,
+            ], 422);
         }
 
         $novoRegistro = RegistroPonto::create([
             'funcionario_id' => $funcionarioId,
             'hora_entrada' => Carbon::now(),
-            'biometrico' => (bool)$biometria,
+            'biometrico' => (bool) $biometria,
         ]);
 
-        broadcast(new NovoRegistroPonto($novoRegistro, $setorId ))->toOthers();
+        broadcast(new NovoRegistroPonto($novoRegistro, $setorId))->toOthers();
 
         return response()->json([
             'message' => 'Hora de entrada registrada com sucesso!',
             'registro' => $novoRegistro,
             'criado ' => $novoRegistro->created_at->timezone('America/Sao_Paulo')->format('Y-m-d H:i:s'),
         ], 200);
+    }
+
+    // $acao === 'saida'
+    if (! $registroAberto) {
+        return response()->json([
+            'message' => 'Nenhuma entrada em aberto foi encontrada para registrar a saída.',
+        ], 422);
+    }
+
+    $entradaCompleta = Carbon::parse($registroAberto->data_local . ' ' . $registroAberto->hora_entrada);
+    $agora = Carbon::now();
+
+    if ($entradaCompleta->diffInHours($agora) > self::MAX_HORAS_TURNO) {
+        return response()->json([
+            'message' => sprintf(
+                'Já se passaram mais de %d horas desde a entrada registrada em %s. Por segurança, a saída não foi fechada automaticamente — solicite a um administrador que corrija este registro manualmente.',
+                self::MAX_HORAS_TURNO,
+                $entradaCompleta->timezone('America/Sao_Paulo')->format('d/m/Y H:i')
+            ),
+            'registro' => $registroAberto,
+        ], 422);
+    }
+
+    $registroAberto->update(['hora_saida' => $agora]);
+
+    broadcast(new NovoRegistroPonto($registroAberto, $setorId))->toOthers();
+
+    return response()->json([
+        'message' => 'Hora de saída registrada com sucesso!',
+        'registro' => $registroAberto,
+    ], 200);
    }
    public function registroDoDia() {
 
