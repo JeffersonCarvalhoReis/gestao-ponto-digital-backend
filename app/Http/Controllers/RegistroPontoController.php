@@ -93,9 +93,13 @@ class RegistroPontoController extends Controller
 
     // Busca o turno em aberto (entrada sem saída) independente do dia em
     // que a entrada ocorreu, para permitir fechar a saída depois da
-    // meia-noite sem "perder" o registro do dia anterior.
+    // meia-noite sem "perder" o registro do dia anterior. Registros já
+    // arquivados por um administrador (arquivado_em preenchido) não contam
+    // como "em aberto" — foram encerrados de propósito sem apurar horas e
+    // não devem voltar a bloquear o funcionário.
     $registroAberto = RegistroPonto::where('funcionario_id', $funcionarioId)
         ->whereNull('hora_saida')
+        ->whereNull('arquivado_em')
         ->orderByDesc('id')
         ->first();
 
