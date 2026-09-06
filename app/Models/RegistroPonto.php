@@ -39,4 +39,9 @@ class RegistroPonto extends Model
     {
         return $this->belongsTo(RelatorioPonto::class);
     }
+
+    public function edicoes()
+    {
+        return $this->hasMany(RegistroPontoEdicao::class)->latest();
+    }
 }
