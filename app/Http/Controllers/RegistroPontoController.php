@@ -10,6 +10,7 @@ use App\Models\RegistroPonto;
 use App\Models\RegistroPontoEdicao;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class RegistroPontoController extends Controller
 {
@@ -159,14 +160,23 @@ class RegistroPontoController extends Controller
      * registros de qualquer dia (não só hoje), já que um turno travado pode
      * ter aberto há vários dias e por isso não apareceria na lista de
      * "registros do dia".
+     *
+     * Suporta paginação (`per_page`) e um filtro `dias_min` (só mostra
+     * registros abertos há pelo menos N dias) — necessário porque o volume
+     * de pendências acumuladas pode ser grande demais para carregar tudo
+     * de uma vez.
      */
-    public function pendentes()
+    public function pendentes(Request $request)
     {
         $this->garantirAdmin();
 
-        $user  = auth()->user();
-        $query = RegistroPonto::with(['funcionario', 'edicoes.editadoPor'])
-            ->whereNull('hora_saida');
+        $user    = auth()->user();
+        $perPage = min((int) $request->input('per_page', 50), 200);
+        $diasMin = $request->input('dias_min');
+
+        $query = RegistroPonto::with('funcionario')
+            ->whereNull('hora_saida')
+            ->whereNull('arquivado_em');
 
         if (! $user->hasRole('super admin')) {
             $query->whereHas('funcionario.unidade.localidade', function ($q) use ($user) {
@@ -174,10 +184,15 @@ class RegistroPontoController extends Controller
             });
         }
 
-        $registros = $query->orderBy('data_local')->orderBy('hora_entrada')->get();
+        if ($diasMin) {
+            $limite = Carbon::now()->subDays((int) $diasMin)->toDateString();
+            $query->where('data_local', '<=', $limite);
+        }
+
+        $paginado = $query->orderBy('data_local')->orderBy('hora_entrada')->paginate($perPage);
 
         return response()->json([
-            'pendentes' => $registros->map(function ($registro) {
+            'pendentes' => $paginado->getCollection()->map(function ($registro) {
                 return [
                     'id'             => $registro->id,
                     'funcionario'    => $registro->funcionario?->nome,
@@ -189,9 +204,99 @@ class RegistroPontoController extends Controller
                         Carbon::parse($registro->data_local . ' ' . $registro->hora_entrada)->diffInHours(Carbon::now()),
                         1
                     ),
-                    'edicoes' => $registro->edicoes,
                 ];
             }),
+            'meta' => [
+                'total'        => $paginado->total(),
+                'current_page' => $paginado->currentPage(),
+                'last_page'    => $paginado->lastPage(),
+                'per_page'     => $paginado->perPage(),
+            ],
+        ], 200);
+    }
+
+    /**
+     * Arquiva em massa registros travados em aberto, sem inventar um
+     * horário de saída — a hora_saida continua NULL de propósito (não é
+     * contabilizada como horas trabalhadas), o registro só sai da fila de
+     * pendências. Pensado para dar vazão a um grande volume de registros
+     * antigos, de antes desta funcionalidade existir, onde não há como
+     * saber com confiança o horário real de saída.
+     *
+     * Aceita dois modos, mutuamente exclusivos:
+     * - "ids": arquiva exatamente os registros selecionados manualmente.
+     * - "dias_min": arquiva TODOS os registros em aberto há pelo menos N
+     *   dias (dentro do escopo do usuário), sem precisar carregar a lista
+     *   inteira no front-end antes — essencial quando o volume é grande.
+     *
+     * Sempre exige um motivo, e cada registro afetado fica com uma linha
+     * própria no histórico de auditoria.
+     */
+    public function arquivarEmMassa(Request $request)
+    {
+        $this->garantirAdmin();
+
+        $user = auth()->user();
+
+        $validated = $request->validate([
+            'ids'      => 'nullable|array|min:1',
+            'ids.*'    => 'integer|exists:registro_pontos,id',
+            'dias_min' => 'nullable|integer|min:1',
+            'motivo'   => 'required|string|min:10|max:1000',
+        ]);
+
+        if (empty($validated['ids']) && empty($validated['dias_min'])) {
+            return response()->json([
+                'message' => 'Selecione registros específicos ou informe um filtro de "dias em aberto" para arquivar em massa.',
+            ], 422);
+        }
+
+        $query = RegistroPonto::whereNull('hora_saida')->whereNull('arquivado_em');
+
+        if (! $user->hasRole('super admin')) {
+            $query->whereHas('funcionario.unidade.localidade', function ($q) use ($user) {
+                $q->where('setor_id', $user->setor_id);
+            });
+        }
+
+        if (! empty($validated['ids'])) {
+            $query->whereIn('id', $validated['ids']);
+        } else {
+            $limite = Carbon::now()->subDays((int) $validated['dias_min'])->toDateString();
+            $query->where('data_local', '<=', $limite);
+        }
+
+        $registros = $query->get();
+
+        if ($registros->isEmpty()) {
+            return response()->json([
+                'message' => 'Nenhum registro encontrado para arquivar com esse filtro.',
+            ], 422);
+        }
+
+        DB::transaction(function () use ($registros, $user, $validated) {
+            foreach ($registros as $registro) {
+                RegistroPontoEdicao::create([
+                    'registro_ponto_id'     => $registro->id,
+                    'tipo'                  => 'arquivamento',
+                    'editado_por_id'        => $user->id,
+                    'data_local_anterior'   => $registro->data_local,
+                    'hora_entrada_anterior' => $registro->hora_entrada,
+                    'hora_saida_anterior'   => $registro->hora_saida,
+                    'motivo'                => $validated['motivo'],
+                ]);
+
+                $registro->update([
+                    'arquivado_em'        => now(),
+                    'arquivado_por_id'    => $user->id,
+                    'motivo_arquivamento' => $validated['motivo'],
+                ]);
+            }
+        });
+
+        return response()->json([
+            'message' => count($registros) . ' registro(s) arquivado(s) com sucesso.',
+            'total'   => count($registros),
         ], 200);
     }
 

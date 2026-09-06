@@ -7,9 +7,11 @@ use Illuminate\Database\Eloquent\Model;
 class RegistroPontoEdicao extends Model
 {
     use HasFactory;
-    protected $table    = 'registro_ponto_edicoes';
+    protected $table = 'registro_ponto_edicoes';
+
     protected $fillable = [
         'registro_ponto_id',
+        'tipo',
         'editado_por_id',
         'data_local_anterior',
         'hora_entrada_anterior',

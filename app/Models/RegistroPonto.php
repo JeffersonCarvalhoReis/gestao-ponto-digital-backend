@@ -16,6 +16,9 @@ class RegistroPonto extends Model
         'funcionario_id',
         'relatorio_ponto_id',
         'data_local',
+        'arquivado_em',
+        'arquivado_por_id',
+        'motivo_arquivamento',
     ];
 
     protected static function booted()
@@ -43,5 +46,10 @@ class RegistroPonto extends Model
     public function edicoes()
     {
         return $this->hasMany(RegistroPontoEdicao::class)->latest();
+    }
+
+    public function arquivadoPor()
+    {
+        return $this->belongsTo(User::class, 'arquivado_por_id');
     }
 }
