@@ -14,8 +14,6 @@ class NewRolesSeeder extends Seeder
     {
         $admin      = Role::firstOrCreate(['name' => 'admin']);
         $superAdmin = Role::firstOrCreate(['name' => 'super admin']);
-        $gestor     = Role::firstOrCreate(['name' => 'gestor']);
-        $user       = Role::firstOrCreate(['name' => 'user']);
 
         /*
          * Permissões atualmente existentes no PermissionsSeeder
@@ -50,14 +48,6 @@ class NewRolesSeeder extends Seeder
         $admin->givePermissionTo(
             Permission::whereIn('name', $newPermissions)->get()
         );
-
-        /*
-         * Gestor recebe as novas permissões
-         */
-        $gestor->givePermissionTo(
-            Permission::whereIn('name', $newPermissions)->get()
-        );
-
         /*
          * User não recebe automaticamente as novas permissões.
          * Adicione aqui somente se desejar.

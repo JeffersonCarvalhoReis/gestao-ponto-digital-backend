@@ -29,7 +29,7 @@ class TiposTurnoSeeder extends Seeder
             [
                 'codigo'              => 'P',
                 'nome'                => 'Plantão 24h (07h às 07h)',
-                'setor_id'            => 1,
+                'setor_id'            => $setorHospital?->id,
                 'hora_inicio'         => '07:00',
                 'hora_fim'            => '07:00',
                 'duracao_minutos'     => 24 * 60,
@@ -40,7 +40,7 @@ class TiposTurnoSeeder extends Seeder
             [
                 'codigo'              => 'MT',
                 'nome'                => '12h (07h às 19h)',
-                'setor_id'            => 1,
+                'setor_id'            => $setorHospital?->id,
                 'hora_inicio'         => '07:00',
                 'hora_fim'            => '19:00',
                 'duracao_minutos'     => 12 * 60,
@@ -51,7 +51,7 @@ class TiposTurnoSeeder extends Seeder
             [
                 'codigo'              => 'SD',
                 'nome'                => 'ACCR 12h (verificar duração exata por equipe)',
-                'setor_id'            => 1,
+                'setor_id'            => $setorHospital?->id,
                 'hora_inicio'         => null,
                 'hora_fim'            => null,
                 'duracao_minutos'     => 12 * 60,
@@ -62,7 +62,7 @@ class TiposTurnoSeeder extends Seeder
             [
                 'codigo'              => 'M',
                 'nome'                => 'Manhã parcial (ex: 08:00 às 10:00)',
-                'setor_id'            => 1,
+                'setor_id'            => $setorHospital?->id,
                 'hora_inicio'         => '08:00',
                 'hora_fim'            => '10:00',
                 'duracao_minutos'     => 2 * 60,
@@ -73,7 +73,7 @@ class TiposTurnoSeeder extends Seeder
             [
                 'codigo'              => 'F',
                 'nome'                => 'Folga',
-                'setor_id'            => 1,
+                'setor_id'            => $setorHospital?->id,
                 'hora_inicio'         => null,
                 'hora_fim'            => null,
                 'duracao_minutos'     => null,
@@ -84,7 +84,7 @@ class TiposTurnoSeeder extends Seeder
             [
                 'codigo'              => 'AL',
                 'nome'                => 'Área Limpa (rotação de setor, não é turno)',
-                'setor_id'            => 1,
+                'setor_id'            => $setorHospital?->id,
                 'hora_inicio'         => null,
                 'hora_fim'            => null,
                 'duracao_minutos'     => null,
@@ -95,7 +95,7 @@ class TiposTurnoSeeder extends Seeder
             [
                 'codigo'              => 'AS',
                 'nome'                => 'Área Suja (rotação de setor, não é turno)',
-                'setor_id'            => 1,
+                'setor_id'            => $setorHospital?->id,
                 'hora_inicio'         => null,
                 'hora_fim'            => null,
                 'duracao_minutos'     => null,
@@ -106,7 +106,7 @@ class TiposTurnoSeeder extends Seeder
             [
                 'codigo'              => 'DOBRA',
                 'nome'                => 'Dobra de plantão (hora extra)',
-                'setor_id'            => 1,
+                'setor_id'            => $setorHospital?->id,
                 'hora_inicio'         => null,
                 'hora_fim'            => null,
                 'duracao_minutos'     => 24 * 60,
@@ -117,7 +117,7 @@ class TiposTurnoSeeder extends Seeder
             [
                 'codigo'              => 'VIAGEM',
                 'nome'                => 'Dobra em viagem (hora extra)',
-                'setor_id'            => 1,
+                'setor_id'            => $setorHospital?->id,
                 'hora_inicio'         => null,
                 'hora_fim'            => null,
                 'duracao_minutos'     => 24 * 60,
