@@ -1,8 +1,12 @@
 {
-    "name": "laravel/laravel",
+    "name": "gestao-saude/ponto",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
-    "keywords": ["laravel", "framework"],
+    "description": "Sistema de ponto digital para gestão de saúde",
+    "keywords": [
+        "ponto",
+        "saúde",
+        "gestão"
+    ],
     "license": "MIT",
     "require": {
         "php": "^8.2",
