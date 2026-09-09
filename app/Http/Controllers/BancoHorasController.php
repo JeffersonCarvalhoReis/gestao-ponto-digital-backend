@@ -123,12 +123,25 @@ class BancoHorasController extends Controller
     {
         $validated = $request->validate([
             'mes'        => 'required|date_format:Y-m',
-            'unidade_id' => 'nullable|integer',
+            'unidade_id' => [
+                'nullable',
+                function ($attribute, $value, $fail) {
+                    if ($value !== 'todas' && ! is_numeric($value)) {
+                        $fail('A unidade deve ser um ID numérico ou "todas".');
+                    }
+                },
+            ],
         ]);
 
         $unidadeId = $validated['unidade_id'] ?? null;
 
-        $unidadeId = $this->resolverUnidadeId($request);
+        if ($unidadeId === 'todas') {
+            $unidadeId = null;
+        } else {
+            $unidadeId = $unidadeId !== null
+                ? (int) $unidadeId
+                : null;
+        }
 
         $fechamentos = $this->service->fecharMesSetor(
             auth()->user()->setor_id,
@@ -137,14 +150,15 @@ class BancoHorasController extends Controller
             $unidadeId
         );
 
-        $escopo = $unidadeId ? 'da unidade selecionada' : 'de todas as unidades';
+        $escopo = $unidadeId
+            ? 'da unidade selecionada'
+            : 'de todas as unidades';
 
         return response()->json([
             'message' => count($fechamentos) . " funcionário(s) {$escopo} com o mês fechado!",
             'data' => $fechamentos,
         ], 200);
     }
-
     /**
      * Reabre um mês já fechado (ex: precisa corrigir ponto ou escala
      * depois do fechamento).
