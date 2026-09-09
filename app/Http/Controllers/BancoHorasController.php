@@ -123,8 +123,10 @@ class BancoHorasController extends Controller
     {
         $validated = $request->validate([
             'mes'        => 'required|date_format:Y-m',
-            'unidade_id' => 'nullable|string',
+            'unidade_id' => 'nullable|integer',
         ]);
+
+        $unidadeId = $validated['unidade_id'] ?? null;
 
         $unidadeId = $this->resolverUnidadeId($request);
 
@@ -139,7 +141,7 @@ class BancoHorasController extends Controller
 
         return response()->json([
             'message' => count($fechamentos) . " funcionário(s) {$escopo} com o mês fechado!",
-            'data'    => $fechamentos,
+            'data' => $fechamentos,
         ], 200);
     }
 
