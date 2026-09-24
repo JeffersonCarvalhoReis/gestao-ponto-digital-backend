@@ -42,10 +42,27 @@ class DiaNaoUtilService
         $ano = Carbon::now()->year;
         $user = auth()->user();
 
-        $resposta = Http::get("https://brasilapi.com.br/api/feriados/v1/$ano");
+        // Se os feriados desse ano já foram cadastrados antes, não precisa
+        // bater na API externa de novo a cada geração de relatório.
+        $jaTemFeriados = DiaNaoUtil::where('tipo', 'feriado')
+            ->whereYear('data', $ano)
+            ->exists();
 
-        if (!$resposta->successful()) {
-            throw new \Exception('Erro ao buscar feriados.');
+        if ($jaTemFeriados) {
+            return;
+        }
+
+        try {
+            $resposta = Http::timeout(5)->get("https://brasilapi.com.br/api/feriados/v1/$ano");
+
+            if (!$resposta->successful()) {
+                Log::warning("BrasilAPI retornou status {$resposta->status()} ao buscar feriados de {$ano}.");
+                return;
+            }
+        } catch (\Throwable $e) {
+            // Instabilidade/timeout na API externa não deve travar a geração do relatório.
+            Log::warning("Falha ao buscar feriados de {$ano}: {$e->getMessage()}");
+            return;
         }
 
         $feriados = $resposta->json();

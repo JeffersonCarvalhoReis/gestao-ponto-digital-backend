@@ -42,6 +42,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/registro-ponto/pendentes', [RegistroPontoController::class, 'pendentes']);
     Route::post('/registro-ponto/arquivar-em-massa', [RegistroPontoController::class, 'arquivarEmMassa']);
     Route::put('/registro-ponto/{registro}/corrigir', [RegistroPontoController::class, 'corrigir']);
+    Route::get('/registro-ponto/funcionario/{funcionario}', [RegistroPontoController::class, 'registrosPorFuncionario']);
 
     // Configuração de ponto (bloqueio de ponto sem biometria por setor)
     Route::get('/configuracao-ponto', [ConfiguracaoPontoController::class, 'show']);

@@ -11,8 +11,14 @@ class Unidade extends Model
     protected $fillable = [
         'nome',
         'localidade_id',
-        'cnes'
+        'cnes',
+        'permite_saida_dia_diferente',
     ];
+
+    protected $casts = [
+        'permite_saida_dia_diferente' => 'boolean',
+    ];
+
     public function funcionarios()
     {
         return $this->hasMany(Funcionario::class);

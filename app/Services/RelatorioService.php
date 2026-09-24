@@ -180,10 +180,30 @@ class RelatorioService
             $ponto              = $registrosPontoDia->first();
             $pontoBiometrico    = $ponto->biometrico;
 
-            for ($i = 0; $i < count($registrosPontoDia); $i++) {
-                $entrada = $registrosPontoDia->pluck('hora_entrada')->toArray();
-                $saida   = $registrosPontoDia->pluck('hora_saida')->toArray();
-            }
+            $entrada = $registrosPontoDia->map(function ($registro) {
+                return $registro->entradaCompleta()->format('H:i');
+            })->toArray();
+
+            // Quando a saída aconteceu num dia diferente do dia sendo
+            // exibido (plantão que atravessa a meia-noite ou dura mais de
+            // 24h), mostra a data junto do horário — sem isso, a saída
+            // parecia sempre ter sido no mesmo dia da entrada, mesmo
+            // quando na verdade foi no dia seguinte (ou depois).
+            $saida = $registrosPontoDia->map(function ($registro) use ($dia) {
+                $saidaCompleta = $registro->saidaCompleta();
+
+                if (! $saidaCompleta) {
+                    return '';
+                }
+
+                $horario = $saidaCompleta->format('H:i');
+
+                if ($saidaCompleta->toDateString() !== $dia) {
+                    $horario .= ' (' . $saidaCompleta->format('d/m') . ')';
+                }
+
+                return $horario;
+            })->toArray();
 
         } elseif ($feriasFuncionario) {
             $status = $feriasFuncionario->descricao;
@@ -220,11 +240,7 @@ class RelatorioService
     private function calcularMinutosTrabalhados($registrosPontoDia)
     {
         return $registrosPontoDia->sum(function ($registro) {
-            if ($registro->hora_saida) {
-                return Carbon::parse($registro->hora_entrada)
-                    ->diffInMinutes(Carbon::parse($registro->hora_saida));
-            }
-            return 0;
+            return $registro->duracaoEmMinutos() ?? 0;
         });
     }
 
