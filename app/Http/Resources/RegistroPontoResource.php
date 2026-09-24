@@ -19,6 +19,7 @@ class RegistroPontoResource extends JsonResource
             'data' => $this->data_local,
             'hora_entrada' => $this->hora_entrada,
             'hora_saida' => $this->hora_saida,
+            'data_saida' => $this->data_saida,
             'biometrico' => $this->biometrico,
             'funcionario_id' => $this->funcionario_id,
             'nome' => $this->funcionario->nome,

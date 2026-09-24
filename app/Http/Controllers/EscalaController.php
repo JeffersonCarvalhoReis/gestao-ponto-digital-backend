@@ -30,17 +30,41 @@ class EscalaController extends Controller
         $validated = $request->validate([
             'mes'        => 'required|date_format:Y-m',
             'unidade_id' => 'nullable|string',
+            'cargo_id'   => 'nullable|integer|exists:cargos,id',
+            'nome'       => 'nullable|string|max:255',
+            'setor_id'   => 'nullable|integer|exists:setores,id',
         ]);
 
         $unidadeId = $this->resolverUnidadeId($request);
 
         $grade = $this->service->grade(
-            auth()->user()->setor_id,
+            $this->resolverSetorId($request),
             $validated['mes'] . '-01',
-            $unidadeId
+            $unidadeId,
+            $validated['cargo_id'] ?? null,
+            $validated['nome'] ?? null
         );
 
         return response()->json($grade, 200);
+    }
+
+    /**
+     * Resolve o setor_id a ser usado na operação:
+     * - Admin (e demais papéis): sempre o próprio setor, preenchido no
+     *   backend a partir do usuário logado — nunca vem do front-end.
+     * - Super admin: pode informar "setor_id" explicitamente para
+     *   trabalhar em outro setor; se não informar, cai no próprio setor
+     *   (mesmo comportamento padrão de um admin comum).
+     */
+    private function resolverSetorId(Request $request): int
+    {
+        $user = auth()->user();
+
+        if ($user->hasRole('super admin') && $request->filled('setor_id')) {
+            return (int) $request->input('setor_id');
+        }
+
+        return $user->setor_id;
     }
 
     /**
@@ -75,8 +99,9 @@ class EscalaController extends Controller
             'data'           => 'required|date',
             'codigo'         => 'required|string|max:10',
             'observacao'     => 'nullable|string|max:255',
+            'setor_id'       => 'nullable|integer|exists:setores,id',
         ]);
-        $setor = auth()->user()->setor_id;
+        $setor = $this->resolverSetorId($request);
 
         try {
             $escala = $this->service->definirDia(
@@ -108,9 +133,10 @@ class EscalaController extends Controller
             'lancamentos.*.data'           => 'required|date',
             'lancamentos.*.codigo'         => 'required|string|max:10',
             'lancamentos.*.observacao'     => 'nullable|string|max:255',
+            'setor_id'                     => 'nullable|integer|exists:setores,id',
         ]);
 
-        $setor = auth()->user()->setor_id;
+        $setor = $this->resolverSetorId($request);
 
         try {
             $resultados = $this->service->definirDiasEmLote(
@@ -152,9 +178,10 @@ class EscalaController extends Controller
         $validated = $request->validate([
             'mes_origem'  => 'required|date_format:Y-m',
             'mes_destino' => 'required|date_format:Y-m',
+            'setor_id'    => 'nullable|integer|exists:setores,id',
         ]);
 
-        $setor = auth()->user()->setor_id;
+        $setor = $this->resolverSetorId($request);
 
         $total = $this->service->copiarMes(
             $setor,

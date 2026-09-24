@@ -20,6 +20,7 @@ class UnidadeResource extends JsonResource
             'localidade' => $this->localidade->nome,
             'localidade_id' => $this->localidade_id,
             'cnes' => $this->cnes,
+            'permite_saida_dia_diferente' => (bool) $this->permite_saida_dia_diferente,
             'deletavel' => $this->users()->count() === 0 && $this->funcionarios()->count() === 0
         ];
     }

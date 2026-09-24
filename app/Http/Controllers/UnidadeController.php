@@ -43,6 +43,15 @@ class UnidadeController extends Controller
             $query->where('id', $id);
         });
 
+        // Permite restringir explicitamente por setor (usado pelo super
+        // admin quando escolhe um setor nos filtros de escalas/pendências,
+        // já que ele enxerga unidades de todos os setores por padrão).
+        $query->when($request->setor_id, function ($query, $setorId) {
+            $query->whereHas('localidade', function ($q) use ($setorId) {
+                $q->where('setor_id', $setorId);
+            });
+        });
+
         $perPage = $request->input('per_page', 10);
         if($perPage == -1) {
             $perPage = Unidade::count();
@@ -90,6 +99,7 @@ class UnidadeController extends Controller
                 'nome' => 'required|min:2|unique:unidades,nome',
                 'localidade_id' => 'required|numeric|exists:localidades,id',
                 'cnes' => 'nullable|numeric|unique:unidades,cnes',
+                'permite_saida_dia_diferente' => 'sometimes|boolean',
         ]);
 
        Unidade::create($data);
@@ -121,6 +131,7 @@ class UnidadeController extends Controller
                 'nome' => 'sometimes|min:2',
                 'localidade_id' => 'sometimes|numeric|exists:localidades,id',
                 'cnes' => 'nullable|numeric|unique:unidades,cnes,'.$id,
+                'permite_saida_dia_diferente' => 'sometimes|boolean',
             ]);
 
             Gate::authorize('update', $unidade);

@@ -17,8 +17,12 @@ class EscalaService
      * Quando $unidadeId é informado, a grade é restrita aos funcionários
      * daquela unidade (dentro do mesmo setor); quando omitido, traz todas
      * as unidades do setor.
+     *
+     * $cargoId restringe aos funcionários de um cargo específico e $nome
+     * filtra por parte do nome do funcionário — ambos usados pelos filtros
+     * da tela de grade de escalas.
      */
-    public function grade(int $setorId, string $mesReferencia, ?int $unidadeId = null): array
+    public function grade(int $setorId, string $mesReferencia, ?int $unidadeId = null, ?int $cargoId = null, ?string $nome = null): array
     {
         $inicio = Carbon::parse($mesReferencia)->startOfMonth();
         $fim    = Carbon::parse($mesReferencia)->endOfMonth();
@@ -26,6 +30,12 @@ class EscalaService
         $funcionarios = Funcionario::doSetor($setorId)
             ->when($unidadeId, function ($query) use ($unidadeId) {
                 $query->where('unidade_id', $unidadeId);
+            })
+            ->when($cargoId, function ($query) use ($cargoId) {
+                $query->where('cargo_id', $cargoId);
+            })
+            ->when($nome, function ($query) use ($nome) {
+                $query->where('nome', 'like', "%{$nome}%");
             })
             ->where('status', true)
             ->orderBy('nome')

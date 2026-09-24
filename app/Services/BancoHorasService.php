@@ -128,20 +128,7 @@ class BancoHorasService
             ->get();
 
         return $registros->sum(function ($registro) {
-            if (! $registro->hora_saida) {
-                return 0;
-            }
-
-            $entrada = Carbon::parse($registro->hora_entrada);
-            $saida   = Carbon::parse($registro->hora_saida);
-
-            // Plantão de 24h pode virar o dia (entrada 07h, saída 07h do dia
-            // seguinte) — se a saída for "menor" que a entrada, soma 1 dia.
-            if ($saida->lessThanOrEqualTo($entrada)) {
-                $saida->addDay();
-            }
-
-            return $entrada->diffInMinutes($saida);
+            return $registro->duracaoEmMinutos() ?? 0;
         });
     }
 

@@ -92,6 +92,17 @@ class RegistroPontoController extends Controller
 
         $setorId = $funcionario->unidade->localidade->setor_id;
 
+        // Cada unidade decide se a saída pode ser registrada num dia
+        // diferente do dia da entrada (ex: plantões que atravessam a
+        // meia-noite). Por padrão (unidade sem o campo definido) o
+        // comportamento histórico é mantido: permite. Ver
+        // App\Models\Unidade::$permite_saida_dia_diferente.
+        $unidade                  = $funcionario->unidade;
+        $permiteSaidaDiaDiferente = is_null($unidade?->permite_saida_dia_diferente)
+            ? true
+            : (bool) $unidade->permite_saida_dia_diferente;
+        $hoje = Carbon::now()->timezone('America/Sao_Paulo')->toDateString();
+
         // Busca o turno em aberto (entrada sem saída) independente do dia em
         // que a entrada ocorreu, para permitir fechar a saída depois da
         // meia-noite sem "perder" o registro do dia anterior. Registros já
@@ -106,10 +117,22 @@ class RegistroPontoController extends Controller
 
         if ($acao === 'entrada') {
             if ($registroAberto) {
-                return response()->json([
-                    'message'  => 'Já existe uma entrada em aberto sem saída registrada. Registre a saída antes de uma nova entrada.',
-                    'registro' => $registroAberto,
-                ], 422);
+                $entradaAbertaEhDeHoje = $registroAberto->data_local === $hoje;
+
+                // Numa unidade que permite saída em dia diferente, ou quando
+                // a entrada em aberto é da própria data de hoje, mantém o
+                // bloqueio de sempre: a saída precisa ser registrada antes
+                // de uma nova entrada. Já numa unidade que NÃO permite saída
+                // em dia diferente, uma entrada esquecida de um dia anterior
+                // não pode travar o funcionário indefinidamente — libera a
+                // nova entrada e deixa o registro antigo pendente de
+                // correção por um administrador (ver método `pendentes`).
+                if ($permiteSaidaDiaDiferente || $entradaAbertaEhDeHoje) {
+                    return response()->json([
+                        'message'  => 'Já existe uma entrada em aberto sem saída registrada. Registre a saída antes de uma nova entrada.',
+                        'registro' => $registroAberto,
+                    ], 422);
+                }
             }
 
             $novoRegistro = RegistroPonto::create([
@@ -134,13 +157,23 @@ class RegistroPontoController extends Controller
             ], 422);
         }
 
+        if (! $permiteSaidaDiaDiferente && $registroAberto->data_local !== $hoje) {
+            return response()->json([
+                'message'  => sprintf(
+                    'Esta unidade não permite registrar a saída em um dia diferente da entrada. A entrada em aberto foi em %s; peça a um administrador para corrigi-la em "Pendências de Correção". Você já pode registrar uma nova entrada normalmente.',
+                    Carbon::parse($registroAberto->data_local . ' ' . $registroAberto->hora_entrada)->format('d/m/Y H:i')
+                ),
+                'registro' => $registroAberto,
+            ], 422);
+        }
+
         $entradaCompleta = Carbon::parse($registroAberto->data_local . ' ' . $registroAberto->hora_entrada);
         $agora           = Carbon::now();
 
         if ($entradaCompleta->diffInHours($agora) > self::MAX_HORAS_TURNO) {
             return response()->json([
                 'message'  => sprintf(
-                    'Já se passaram mais de %d horas desde a entrada registrada em %s. Por segurança, a saída não foi fechada automaticamente — peça a um administrador para corrigi-la em "Banco de horas > Pendências deCorreçãodePonto".',
+                    'Já se passaram mais de %d horas desde a entrada registrada em %s. Por segurança, a saída não foi fechada automaticamente — peça a um administrador para corrigi-la em "Pendências de Correção".',
                     self::MAX_HORAS_TURNO,
                     $entradaCompleta->timezone('America/Sao_Paulo')->format('d/m/Y H:i')
                 ),
@@ -148,7 +181,10 @@ class RegistroPontoController extends Controller
             ], 422);
         }
 
-        $registroAberto->update(['hora_saida' => $agora]);
+        $registroAberto->update([
+            'hora_saida' => $agora->format('H:i:s'),
+            'data_saida' => $agora->toDateString(),
+        ]);
 
         broadcast(new NovoRegistroPonto($registroAberto, $setorId))->toOthers();
 
@@ -169,7 +205,9 @@ class RegistroPontoController extends Controller
      * Suporta paginação (`per_page`) e um filtro `dias_min` (só mostra
      * registros abertos há pelo menos N dias) — necessário porque o volume
      * de pendências acumuladas pode ser grande demais para carregar tudo
-     * de uma vez.
+     * de uma vez. Também aceita `unidade_id`, `cargo_id` e `nome` para
+     * refinar a busca, e `setor_id` (só para super admin) para trabalhar
+     * num setor específico.
      */
     public function pendentes(Request $request)
     {
@@ -183,11 +221,8 @@ class RegistroPontoController extends Controller
             ->whereNull('hora_saida')
             ->whereNull('arquivado_em');
 
-        if (! $user->hasRole('super admin')) {
-            $query->whereHas('funcionario.unidade.localidade', function ($q) use ($user) {
-                $q->where('setor_id', $user->setor_id);
-            });
-        }
+        $this->aplicarEscopoSetor($query, $request, $user);
+        $this->aplicarFiltrosFuncionario($query, $request);
 
         if ($diasMin) {
             $limite = Carbon::now()->subDays((int) $diasMin)->toDateString();
@@ -217,6 +252,100 @@ class RegistroPontoController extends Controller
                 'last_page'    => $paginado->lastPage(),
                 'per_page'     => $paginado->perPage(),
             ],
+        ], 200);
+    }
+
+    /**
+     * Restringe a query ao setor correto:
+     * - Admin (e demais papéis): sempre o próprio setor, resolvido aqui no
+     *   backend a partir do usuário logado.
+     * - Super admin: se informar "setor_id" no filtro, restringe àquele
+     *   setor; se não informar, mantém o padrão histórico de enxergar
+     *   todos os setores de uma vez.
+     */
+    private function aplicarEscopoSetor($query, Request $request, $user): void
+    {
+        if (! $user->hasRole('super admin')) {
+            $query->whereHas('funcionario.unidade.localidade', function ($q) use ($user) {
+                $q->where('setor_id', $user->setor_id);
+            });
+
+            return;
+        }
+
+        if ($request->filled('setor_id')) {
+            $setorId = (int) $request->input('setor_id');
+            $query->whereHas('funcionario.unidade.localidade', function ($q) use ($setorId) {
+                $q->where('setor_id', $setorId);
+            });
+        }
+    }
+
+    /**
+     * Filtros por unidade, cargo e nome do funcionário — usados pela tela
+     * de Pendências de Correção de Ponto.
+     */
+    private function aplicarFiltrosFuncionario($query, Request $request): void
+    {
+        $query->when($request->input('unidade_id'), function ($q, $unidadeId) {
+            $q->whereHas('funcionario', function ($q2) use ($unidadeId) {
+                $q2->where('unidade_id', $unidadeId);
+            });
+        });
+
+        $query->when($request->input('cargo_id'), function ($q, $cargoId) {
+            $q->whereHas('funcionario', function ($q2) use ($cargoId) {
+                $q2->where('cargo_id', $cargoId);
+            });
+        });
+
+        $query->when($request->input('nome'), function ($q, $nome) {
+            $q->whereHas('funcionario', function ($q2) use ($nome) {
+                $q2->where('nome', 'like', "%{$nome}%");
+            });
+        });
+    }
+
+    /**
+     * Lista os registros de ponto (entrada/saída) de um funcionário num
+     * período — usado para revisar e corrigir dias além do que aparece na
+     * fila de pendências (registros que já têm saída também entram, para
+     * que um erro de horário digitado errado possa ser corrigido).
+     * Restrito a administradores e respeita o mesmo escopo de setor da
+     * listagem de pendentes.
+     *
+     * Ex: GET /registro-ponto/funcionario/12?data_inicio=2026-09-01&data_fim=2026-09-30
+     */
+    public function registrosPorFuncionario(Request $request, Funcionario $funcionario)
+    {
+        $this->garantirAdmin();
+
+        $user = auth()->user();
+
+        if (! $user->hasRole('super admin')) {
+            $setorDoFuncionario = $funcionario->unidade?->localidade?->setor_id;
+            if ($setorDoFuncionario !== $user->setor_id) {
+                return response()->json(['message' => 'Você não tem permissão para visualizar os registros deste funcionário.'], 403);
+            }
+        }
+
+        $validated = $request->validate([
+            'data_inicio' => 'nullable|date',
+            'data_fim'    => 'nullable|date',
+        ]);
+
+        $dataFim    = $validated['data_fim'] ?? Carbon::now()->toDateString();
+        $dataInicio = $validated['data_inicio'] ?? Carbon::parse($dataFim)->subDays(30)->toDateString();
+
+        $registros = RegistroPonto::where('funcionario_id', $funcionario->id)
+            ->whereBetween('data_local', [$dataInicio, $dataFim])
+            ->orderByDesc('data_local')
+            ->orderByDesc('hora_entrada')
+            ->get(['id', 'funcionario_id', 'data_local', 'hora_entrada', 'hora_saida', 'data_saida', 'arquivado_em']);
+
+        return response()->json([
+            'funcionario' => ['id' => $funcionario->id, 'nome' => $funcionario->nome],
+            'registros'   => $registros,
         ], 200);
     }
 
@@ -258,11 +387,7 @@ class RegistroPontoController extends Controller
 
         $query = RegistroPonto::whereNull('hora_saida')->whereNull('arquivado_em');
 
-        if (! $user->hasRole('super admin')) {
-            $query->whereHas('funcionario.unidade.localidade', function ($q) use ($user) {
-                $q->where('setor_id', $user->setor_id);
-            });
-        }
+        $this->aplicarEscopoSetor($query, $request, $user);
 
         if (! empty($validated['ids'])) {
             $query->whereIn('id', $validated['ids']);
@@ -371,8 +496,14 @@ class RegistroPontoController extends Controller
 
         $registro->update([
             'data_local'   => $validated['data_local'],
-            'hora_entrada' => $entradaNova,
-            'hora_saida'   => $saidaNova,
+            'hora_entrada' => $entradaNova->format('H:i:s'),
+            'hora_saida'   => $saidaNova?->format('H:i:s'),
+            // A data da saída fica gravada explicitamente (mesmo quando
+            // igual à data da entrada), para não depender mais da
+            // adivinhação "se a hora da saída for menor, é dia seguinte" —
+            // que falha em plantões acima de 24h. Ver
+            // App\Models\RegistroPonto::saidaCompleta().
+            'data_saida'   => $saidaNova?->toDateString(),
         ]);
 
         return response()->json([

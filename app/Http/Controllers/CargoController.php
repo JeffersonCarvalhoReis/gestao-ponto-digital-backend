@@ -25,6 +25,25 @@ class CargoController extends Controller
             $query->where('nome','like', "%$nome%");
         });
 
+        // Restringe aos cargos que de fato têm funcionário(s) cadastrado(s)
+        // na unidade informada — usado pelos filtros de "cargo" que
+        // dependem da unidade selecionada (ex: grade de escalas, pendências
+        // de correção de ponto), para não listar cargos inexistentes ali.
+        $query->when($request->unidade_id, function ($query, $unidadeId) {
+            $query->whereHas('funcionarios', function ($q) use ($unidadeId) {
+                $q->where('unidade_id', $unidadeId);
+            });
+        });
+
+        // Quando não há unidade específica selecionada (ex: "Todas as
+        // Unidades"), permite restringir aos cargos usados dentro de um
+        // setor inteiro.
+        $query->when(!$request->unidade_id && $request->setor_id, function ($query) use ($request) {
+            $query->whereHas('funcionarios.unidade.localidade', function ($q) use ($request) {
+                $q->where('setor_id', $request->setor_id);
+            });
+        });
+
 
         $perPage = $request->input('per_page', 10);
         if($perPage == -1) {

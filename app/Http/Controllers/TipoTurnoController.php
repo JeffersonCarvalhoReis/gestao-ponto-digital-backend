@@ -24,10 +24,17 @@ class TipoTurnoController extends Controller
     public function index(Request $request
     ) {
         $query = TipoTurno::query()->where('ativo', true);
-        $setor = auth()->user()->setor_id;
+        $user  = auth()->user();
+
+        // Super admin pode consultar os turnos de um setor diferente do
+        // seu (ex: ao trocar o setor selecionado na grade de escalas).
+        // Demais papéis sempre ficam restritos ao próprio setor.
+        $setor = ($user->hasRole('super admin') && $request->filled('setor_id'))
+            ? (int) $request->input('setor_id')
+            : $user->setor_id;
 
         $query->where(function ($q) use ($setor) {
-            $q->where('setor_id', $setor);
+            $q->where('setor_id', $setor)->orWhereNull('setor_id');
         });
         $query->when($request->nome, function ($query, $nome) {
             $query->where('nome', 'like', "%$nome%");
