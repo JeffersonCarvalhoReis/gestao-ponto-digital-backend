@@ -160,7 +160,7 @@ class RegistroPontoController extends Controller
         if (! $permiteSaidaDiaDiferente && $registroAberto->data_local !== $hoje) {
             return response()->json([
                 'message'  => sprintf(
-                    'Esta unidade não permite registrar a saída em um dia diferente da entrada. A entrada em aberto foi em %s; peça a um administrador para corrigi-la em "Pendências de Correção". Você já pode registrar uma nova entrada normalmente.',
+                    'Esta unidade não permite registrar a saída em um dia diferente da entrada. A entrada em aberto foi em %s; peça a um administrador para corrigi-la em "Banco de horas > Pendências de Correção de Ponto". Você já pode registrar uma nova entrada normalmente.',
                     Carbon::parse($registroAberto->data_local . ' ' . $registroAberto->hora_entrada)->format('d/m/Y H:i')
                 ),
                 'registro' => $registroAberto,
@@ -173,7 +173,7 @@ class RegistroPontoController extends Controller
         if ($entradaCompleta->diffInHours($agora) > self::MAX_HORAS_TURNO) {
             return response()->json([
                 'message'  => sprintf(
-                    'Já se passaram mais de %d horas desde a entrada registrada em %s. Por segurança, a saída não foi fechada automaticamente — peça a um administrador para corrigi-la em "Pendências de Correção".',
+                    'Já se passaram mais de %d horas desde a entrada registrada em %s. Por segurança, a saída não foi fechada automaticamente — peça a um administrador para corrigi-la em "Banco de horas > Pendências deCorreçãodePonto".',
                     self::MAX_HORAS_TURNO,
                     $entradaCompleta->timezone('America/Sao_Paulo')->format('d/m/Y H:i')
                 ),
