@@ -217,7 +217,7 @@ class RegistroPontoController extends Controller
         $perPage = min((int) $request->input('per_page', 50), 200);
         $diasMin = $request->input('dias_min');
 
-        $query = RegistroPonto::with('funcionario')
+        $query = RegistroPonto::with('funcionario.unidade')
             ->whereNull('hora_saida')
             ->whereNull('arquivado_em');
 
@@ -237,6 +237,7 @@ class RegistroPontoController extends Controller
                     'id'             => $registro->id,
                     'funcionario'    => $registro->funcionario?->nome,
                     'funcionario_id' => $registro->funcionario_id,
+                    'unidade'        => $registro->funcionario?->unidade?->nome,
                     'data_local'     => $registro->data_local,
                     'hora_entrada'   => $registro->hora_entrada,
                     'hora_saida'     => $registro->hora_saida,
