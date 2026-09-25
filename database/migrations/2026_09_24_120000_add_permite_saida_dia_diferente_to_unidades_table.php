@@ -20,7 +20,7 @@ return new class extends Migration
             // entrada; se o funcionário não bateu a saída, o sistema passa
             // a permitir uma nova entrada no dia seguinte mesmo assim (o
             // registro antigo fica em aberto, visível em
-            // "Pendências de Correção", para um
+            // "Banco de horas > Pendências de Correção de Ponto", para um
             // administrador corrigir manualmente).
             $table->boolean('permite_saida_dia_diferente')->default(true)->after('cnes');
         });
