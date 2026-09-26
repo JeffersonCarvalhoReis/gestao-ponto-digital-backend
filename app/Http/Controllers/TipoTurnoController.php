@@ -78,8 +78,10 @@ class TipoTurnoController extends Controller
         ], 201);
     }
 
-    public function show(TipoTurno $tipoTurno)
+    public function show(string $id)
     {
+        $tipoTurno = TipoTurno::findOrFail($id);
+
         return new TipoTurnoResource($tipoTurno);
     }
 
@@ -99,8 +101,18 @@ class TipoTurnoController extends Controller
         ], 200);
     }
 
-    public function destroy(TipoTurno $tipoTurno)
+    public function destroy(string $id)
     {
+        // Busca manualmente por ID (em vez de usar o binding implícito de
+        // rota `TipoTurno $tipoTurno`) porque o parâmetro gerado pela rota
+        // do resource "tipos-turno" (plural, com hífen) não bate com o nome
+        // esperado pelo Laravel para o binding automático. Quando isso
+        // acontece, o Laravel injeta silenciosamente uma instância NOVA e
+        // vazia do model em vez do registro real — e o update() seguinte
+        // vira um INSERT (linha fantasma), não um UPDATE no registro
+        // correto. findOrFail evita esse problema por completo.
+        $tipoTurno = TipoTurno::findOrFail($id);
+
         // Não apaga fisicamente: turnos já usados em escalas antigas precisam
         // continuar existindo para relatórios históricos. Apenas inativa.
         $tipoTurno->update(['ativo' => false]);

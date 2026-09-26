@@ -161,4 +161,40 @@ class BancoHorasService
 
         return $registro;
     }
+
+    /**
+     * Reabre o mês de todos os funcionários de um setor de uma vez (espelha
+     * fecharMesSetor). Só reabre quem de fato está fechado para aquele mês
+     * — quem já está aberto simplesmente não é afetado. Se $unidadeId for
+     * informado, restringe à unidade; caso contrário, reabre o setor
+     * inteiro.
+     */
+    public function reabrirMesSetor(int $setorId, string $mesReferencia, ?int $unidadeId = null): array
+    {
+        $mesReferencia = Carbon::parse($mesReferencia)->startOfMonth()->toDateString();
+
+        $funcionarios = Funcionario::doSetor($setorId)
+            ->where('status', true)
+            ->when($unidadeId, function ($query) use ($unidadeId) {
+                $query->where('unidade_id', $unidadeId);
+            })
+            ->pluck('id');
+
+        $registros = BancoHorasMensal::whereIn('funcionario_id', $funcionarios)
+            ->where('mes_referencia', $mesReferencia)
+            ->where('status', 'fechado')
+            ->get();
+
+        DB::transaction(function () use ($registros) {
+            foreach ($registros as $registro) {
+                $registro->update([
+                    'status'      => 'aberto',
+                    'fechado_em'  => null,
+                    'fechado_por' => null,
+                ]);
+            }
+        });
+
+        return $registros->all();
+    }
 }
