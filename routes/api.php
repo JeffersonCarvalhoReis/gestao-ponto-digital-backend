@@ -99,5 +99,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/banco-horas/{funcionario}/fechar-mes', [BancoHorasController::class, 'fecharMesFuncionario']);
     Route::post('/banco-horas/fechar-mes', [BancoHorasController::class, 'fecharMes']);
     Route::post('/banco-horas/{funcionario}/reabrir-mes', [BancoHorasController::class, 'reabrirMes']);
+    Route::post('/banco-horas/reabrir-mes', [BancoHorasController::class, 'reabrirMesTodos']);
 
 });
