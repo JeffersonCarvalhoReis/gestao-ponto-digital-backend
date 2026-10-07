@@ -24,7 +24,8 @@ class User extends Authenticatable
         'user',
         'password',
         'unidade_id',
-        'setor_id'
+        'setor_id',
+        'pode_corrigir_pendencias',
     ];
 
     public function unidade()
@@ -34,6 +35,20 @@ class User extends Authenticatable
     public function setor()
     {
         return $this->belongsTo(Setor::class);
+    }
+
+    /**
+     * Admin e super admin sempre podem resolver pendências de correção de
+     * ponto. Gestor só pode se um administrador liberou explicitamente
+     * (padrão: não). Demais funções nunca.
+     */
+    public function podeResolverPendencias(): bool
+    {
+        if ($this->hasAnyRole(['admin', 'super admin'])) {
+            return true;
+        }
+
+        return $this->hasRole('gestor') && (bool) $this->pode_corrigir_pendencias;
     }
 
     /**
@@ -55,6 +70,7 @@ class User extends Authenticatable
     {
         return [
             'password' => 'hashed',
+            'pode_corrigir_pendencias' => 'boolean',
         ];
     }
 }

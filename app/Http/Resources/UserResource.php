@@ -24,6 +24,8 @@ class UserResource extends JsonResource
                 'id'       => $this->unidade->id,
                'nome'      => $this->unidade->nome,
             ] : null,
+            'pode_corrigir_pendencias' => $this->resource->podeResolverPendencias(),
+            'pode_corrigir_pendencias_flag' => (bool) $this->pode_corrigir_pendencias,
             'deletavel'    => true
         ];
     }

@@ -137,6 +137,11 @@ class RegistroPontoController extends Controller
 
             $novoRegistro = RegistroPonto::create([
                 'funcionario_id' => $funcionarioId,
+                // Unidade onde o ponto foi fisicamente batido (o operador/
+                // dispositivo logado agora), não a unidade de cadastro do
+                // funcionário — essencial para equipes multi-unidade, para
+                // que o registro apareça só na unidade certa depois.
+                'unidade_id'     => auth()->user()->unidade_id,
                 'hora_entrada'   => Carbon::now(),
                 'biometrico'     => (bool) $biometria,
             ]);
@@ -211,7 +216,7 @@ class RegistroPontoController extends Controller
      */
     public function pendentes(Request $request)
     {
-        $this->garantirAdmin();
+        $this->garantirPodeResolverPendencias();
 
         $user    = auth()->user();
         $perPage = min((int) $request->input('per_page', 50), 200);
@@ -224,6 +229,23 @@ class RegistroPontoController extends Controller
         $this->aplicarEscopoSetor($query, $request, $user);
         $this->aplicarFiltrosFuncionario($query, $request);
 
+        // Funcionários realmente bloqueados: entrada em aberto há mais de
+        // MAX_HORAS_TURNO horas (a saída não pode mais ser registrada pelo
+        // ponto). Conta funcionários distintos, respeitando escopo e filtros
+        // de unidade/cargo/nome/setor, mas ignorando "dias_min" e a
+        // paginação — assim o número não muda ao navegar pela lista.
+        $limiteBloqueio = Carbon::now()->subHours(self::MAX_HORAS_TURNO);
+        $totalBloqueados = (clone $query)
+            ->where(function ($q) use ($limiteBloqueio) {
+                $q->where('data_local', '<', $limiteBloqueio->toDateString())
+                    ->orWhere(function ($q2) use ($limiteBloqueio) {
+                        $q2->where('data_local', $limiteBloqueio->toDateString())
+                            ->where('hora_entrada', '<', $limiteBloqueio->format('H:i:s'));
+                    });
+            })
+            ->distinct()
+            ->count('funcionario_id');
+
         if ($diasMin) {
             $limite = Carbon::now()->subDays((int) $diasMin)->toDateString();
             $query->where('data_local', '<=', $limite);
@@ -233,6 +255,8 @@ class RegistroPontoController extends Controller
 
         return response()->json([
             'pendentes' => $paginado->getCollection()->map(function ($registro) {
+                $horasAberto = Carbon::parse($registro->data_local . ' ' . $registro->hora_entrada)->diffInHours(Carbon::now());
+
                 return [
                     'id'             => $registro->id,
                     'funcionario'    => $registro->funcionario?->nome,
@@ -241,17 +265,18 @@ class RegistroPontoController extends Controller
                     'data_local'     => $registro->data_local,
                     'hora_entrada'   => $registro->hora_entrada,
                     'hora_saida'     => $registro->hora_saida,
-                    'horas_aberto'   => round(
-                        Carbon::parse($registro->data_local . ' ' . $registro->hora_entrada)->diffInHours(Carbon::now()),
-                        1
-                    ),
+                    'horas_aberto'   => round($horasAberto, 1),
+                    // true quando passou do limite e o funcionário está bloqueado
+                    'bloqueado'      => $horasAberto > self::MAX_HORAS_TURNO,
                 ];
             }),
             'meta'      => [
-                'total'        => $paginado->total(),
-                'current_page' => $paginado->currentPage(),
-                'last_page'    => $paginado->lastPage(),
-                'per_page'     => $paginado->perPage(),
+                'total'            => $paginado->total(),
+                'total_bloqueados' => $totalBloqueados,
+                'limite_horas'     => self::MAX_HORAS_TURNO,
+                'current_page'     => $paginado->currentPage(),
+                'last_page'        => $paginado->lastPage(),
+                'per_page'         => $paginado->perPage(),
             ],
         ], 200);
     }
@@ -266,6 +291,16 @@ class RegistroPontoController extends Controller
      */
     private function aplicarEscopoSetor($query, Request $request, $user): void
     {
+        // Gestor: somente funcionários da própria unidade, ignorando
+        // qualquer unidade/setor enviado na requisição.
+        if ($this->ehGestorRestritoAUnidade($user)) {
+            $query->whereHas('funcionario', function ($q) use ($user) {
+                $q->where('unidade_id', $user->unidade_id);
+            });
+
+            return;
+        }
+
         if (! $user->hasRole('super admin')) {
             $query->whereHas('funcionario.unidade.localidade', function ($q) use ($user) {
                 $q->where('setor_id', $user->setor_id);
@@ -319,11 +354,15 @@ class RegistroPontoController extends Controller
      */
     public function registrosPorFuncionario(Request $request, Funcionario $funcionario)
     {
-        $this->garantirAdmin();
+        $this->garantirPodeResolverPendencias();
 
         $user = auth()->user();
 
-        if (! $user->hasRole('super admin')) {
+        if ($this->ehGestorRestritoAUnidade($user)) {
+            if ((int) $funcionario->unidade_id !== (int) $user->unidade_id) {
+                return response()->json(['message' => 'Você só pode visualizar os registros de funcionários da sua unidade.'], 403);
+            }
+        } elseif (! $user->hasRole('super admin')) {
             $setorDoFuncionario = $funcionario->unidade?->localidade?->setor_id;
             if ($setorDoFuncionario !== $user->setor_id) {
                 return response()->json(['message' => 'Você não tem permissão para visualizar os registros deste funcionário.'], 403);
@@ -369,7 +408,7 @@ class RegistroPontoController extends Controller
      */
     public function arquivarEmMassa(Request $request)
     {
-        $this->garantirAdmin();
+        $this->garantirPodeResolverPendencias();
 
         $user = auth()->user();
 
@@ -440,10 +479,14 @@ class RegistroPontoController extends Controller
      */
     public function corrigir(Request $request, RegistroPonto $registro)
     {
-        $this->garantirAdmin();
+        $this->garantirPodeResolverPendencias();
 
         $user = auth()->user();
-        if (! $user->hasRole('super admin')) {
+        if ($this->ehGestorRestritoAUnidade($user)) {
+            if ((int) $registro->funcionario?->unidade_id !== (int) $user->unidade_id) {
+                return response()->json(['message' => 'Você só pode corrigir registros de funcionários da sua unidade.'], 403);
+            }
+        } elseif (! $user->hasRole('super admin')) {
             $setorDoRegistro = $registro->funcionario?->unidade?->localidade?->setor_id;
             if ($setorDoRegistro !== $user->setor_id) {
                 return response()->json(['message' => 'Você não tem permissão para corrigir este registro.'], 403);
@@ -513,13 +556,26 @@ class RegistroPontoController extends Controller
         ], 200);
     }
 
-    private function garantirAdmin(): void
+    /**
+     * Admin/super admin sempre podem. Gestor só se um administrador liberou
+     * (users.pode_corrigir_pendencias) — e, nesse caso, enxerga e corrige
+     * apenas funcionários da própria unidade (ver escopos abaixo).
+     */
+    private function garantirPodeResolverPendencias(): void
     {
-        if (! auth()->user()->hasAnyRole(['admin', 'super admin'])) {
+        if (! auth()->user()->podeResolverPendencias()) {
             abort(response()->json([
-                'message' => 'Apenas administradores podem corrigir registros de ponto.',
+                'message' => 'Você não tem permissão para corrigir registros de ponto.',
             ], 403));
         }
+    }
+
+    /**
+     * Gestor com permissão fica restrito à unidade a que pertence.
+     */
+    private function ehGestorRestritoAUnidade($user): bool
+    {
+        return ! $user->hasAnyRole(['admin', 'super admin']) && $user->hasRole('gestor');
     }
 
     public function registroDoDia()
@@ -529,8 +585,15 @@ class RegistroPontoController extends Controller
         $query = RegistroPonto::with('funcionario')->whereDate('data_local', Carbon::today());
 
         if (! $user->hasAnyRole(['admin', 'super admin'])) {
-            $query->whereHas('funcionario', function ($q) use ($user) {
-                $q->where('unidade_id', $user->unidade_id);
+            $query->where(function ($q) use ($user) {
+                // Registros batidos fisicamente nesta unidade...
+                $q->where('unidade_id', $user->unidade_id)
+                    // ...ou, se este usuário É a própria "Equipe Multi",
+                    // todos os registros dos funcionários dela, não importa
+                    // em qual unidade cada um foi batido.
+                    ->orWhereHas('funcionario', function ($q2) use ($user) {
+                        $q2->where('unidade_id', $user->unidade_id);
+                    });
             });
         }
         if ($user->hasAnyRole('admin')) {

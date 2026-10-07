@@ -44,6 +44,7 @@ class AuthController extends Controller
             'user' => $user->user,
             'setor_id' => $user->unidade->localidade->setor_id,
             'funcao' => $user->roles[0]->name,
+            'pode_corrigir_pendencias' => $user->podeResolverPendencias(),
             'unidade' => $user->unidade ? [
                 'id' => $user->unidade->id,
                'nome' => $user->unidade->nome,

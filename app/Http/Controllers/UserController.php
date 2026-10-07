@@ -106,6 +106,7 @@ class UserController extends Controller
             'funcao'   => 'required|exists:roles,name',
             'unidade'  => 'required|numeric|exists:unidades,id',
             'setor_id' => 'required|numeric|exists:setores,id',
+            'pode_corrigir_pendencias' => 'sometimes|boolean',
         ]);
 
         if (! $request->user()->can('store', [User::class, $request->funcao])) {
@@ -116,7 +117,9 @@ class UserController extends Controller
             'password'   => Hash::make($request->senha),
             'unidade_id' => (int) $request->unidade,
             'setor_id'   => (int) $request->setor_id,
-
+            // Só vale para gestor; qualquer outra função fica sempre false.
+            'pode_corrigir_pendencias' => $request->funcao === 'gestor'
+                && $request->boolean('pode_corrigir_pendencias'),
         ]);
         $user->assignRole($request->funcao);
         $user = new UserResource($user);
@@ -154,6 +157,7 @@ class UserController extends Controller
             'funcao'   => 'sometimes|exists:roles,name',
             'unidade'  => 'sometimes|numeric|exists:unidades,id',
             'setor_id' => 'sometimes|exists:setores,id',
+            'pode_corrigir_pendencias' => 'sometimes|boolean',
         ]);
 
         $data = [
@@ -164,6 +168,18 @@ class UserController extends Controller
 
         if (! empty($request->senha)) {
             $data['password'] = Hash::make($request->senha);
+        }
+
+        // A liberação das pendências só pode ser alterada por admin/super
+        // admin (nunca pelo próprio gestor editando a si mesmo).
+        if ($request->user()->hasAnyRole(['admin', 'super admin'])) {
+            $novaFuncao = $request->funcao ?? $userToUpdate->roles->first()?->name;
+
+            if ($novaFuncao !== 'gestor') {
+                $data['pode_corrigir_pendencias'] = false;
+            } elseif ($request->has('pode_corrigir_pendencias')) {
+                $data['pode_corrigir_pendencias'] = $request->boolean('pode_corrigir_pendencias');
+            }
         }
 
         $userToUpdate->update($data);
