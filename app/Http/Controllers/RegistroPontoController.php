@@ -137,11 +137,6 @@ class RegistroPontoController extends Controller
 
             $novoRegistro = RegistroPonto::create([
                 'funcionario_id' => $funcionarioId,
-                // Unidade onde o ponto foi fisicamente batido (o operador/
-                // dispositivo logado agora), não a unidade de cadastro do
-                // funcionário — essencial para equipes multi-unidade, para
-                // que o registro apareça só na unidade certa depois.
-                'unidade_id'     => auth()->user()->unidade_id,
                 'hora_entrada'   => Carbon::now(),
                 'biometrico'     => (bool) $biometria,
             ]);
@@ -585,15 +580,8 @@ class RegistroPontoController extends Controller
         $query = RegistroPonto::with('funcionario')->whereDate('data_local', Carbon::today());
 
         if (! $user->hasAnyRole(['admin', 'super admin'])) {
-            $query->where(function ($q) use ($user) {
-                // Registros batidos fisicamente nesta unidade...
-                $q->where('unidade_id', $user->unidade_id)
-                    // ...ou, se este usuário É a própria "Equipe Multi",
-                    // todos os registros dos funcionários dela, não importa
-                    // em qual unidade cada um foi batido.
-                    ->orWhereHas('funcionario', function ($q2) use ($user) {
-                        $q2->where('unidade_id', $user->unidade_id);
-                    });
+            $query->whereHas('funcionario', function ($q) use ($user) {
+                $q->where('unidade_id', $user->unidade_id);
             });
         }
         if ($user->hasAnyRole('admin')) {
