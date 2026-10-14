@@ -224,19 +224,42 @@ class RegistroPontoController extends Controller
         $this->aplicarEscopoSetor($query, $request, $user);
         $this->aplicarFiltrosFuncionario($query, $request);
 
-        // Funcionários realmente bloqueados: entrada em aberto há mais de
-        // MAX_HORAS_TURNO horas (a saída não pode mais ser registrada pelo
-        // ponto). Conta funcionários distintos, respeitando escopo e filtros
-        // de unidade/cargo/nome/setor, mas ignorando "dias_min" e a
-        // paginação — assim o número não muda ao navegar pela lista.
+        // Entrada em aberto há mais de MAX_HORAS_TURNO horas. Conta/classifica
+        // só depois do filtro de unidade/cargo/nome/setor e ignorando
+        // "dias_min" e a paginação — assim os números não mudam ao navegar.
         $limiteBloqueio = Carbon::now()->subHours(self::MAX_HORAS_TURNO);
+        $abertoHaMaisDoLimite = function ($q) use ($limiteBloqueio) {
+            $q->where('data_local', '<', $limiteBloqueio->toDateString())
+                ->orWhere(function ($q2) use ($limiteBloqueio) {
+                    $q2->where('data_local', $limiteBloqueio->toDateString())
+                        ->where('hora_entrada', '<', $limiteBloqueio->format('H:i:s'));
+                });
+        };
+
+        // Só fica REALMENTE bloqueado quem é de unidade que permite saída em
+        // dia diferente (ou sem o campo definido, que por padrão permite):
+        // lá o funcionário não consegue fechar a saída (passou do limite) nem
+        // abrir nova entrada (já existe uma aberta). Em unidade que NÃO
+        // permite, a nova entrada é liberada mesmo com o registro antigo
+        // aberto (ver registrarPonto) — logo ele não está bloqueado, apenas
+        // com uma pendência antiga que merece atenção (aviso).
+        $unidadePermite = function ($q) {
+            $q->where(function ($q2) {
+                $q2->where('permite_saida_dia_diferente', true)
+                    ->orWhereNull('permite_saida_dia_diferente');
+            });
+        };
+
         $totalBloqueados = (clone $query)
-            ->where(function ($q) use ($limiteBloqueio) {
-                $q->where('data_local', '<', $limiteBloqueio->toDateString())
-                    ->orWhere(function ($q2) use ($limiteBloqueio) {
-                        $q2->where('data_local', $limiteBloqueio->toDateString())
-                            ->where('hora_entrada', '<', $limiteBloqueio->format('H:i:s'));
-                    });
+            ->where($abertoHaMaisDoLimite)
+            ->whereHas('funcionario.unidade', $unidadePermite)
+            ->distinct()
+            ->count('funcionario_id');
+
+        $totalAvisos = (clone $query)
+            ->where($abertoHaMaisDoLimite)
+            ->whereHas('funcionario.unidade', function ($q) {
+                $q->where('permite_saida_dia_diferente', false);
             })
             ->distinct()
             ->count('funcionario_id');
@@ -252,6 +275,12 @@ class RegistroPontoController extends Controller
             'pendentes' => $paginado->getCollection()->map(function ($registro) {
                 $horasAberto = Carbon::parse($registro->data_local . ' ' . $registro->hora_entrada)->diffInHours(Carbon::now());
 
+                $unidade  = $registro->funcionario?->unidade;
+                $permiteSaidaDiaDiferente = is_null($unidade?->permite_saida_dia_diferente)
+                    ? true
+                    : (bool) $unidade->permite_saida_dia_diferente;
+                $passouDoLimite = $horasAberto > self::MAX_HORAS_TURNO;
+
                 return [
                     'id'             => $registro->id,
                     'funcionario'    => $registro->funcionario?->nome,
@@ -261,13 +290,19 @@ class RegistroPontoController extends Controller
                     'hora_entrada'   => $registro->hora_entrada,
                     'hora_saida'     => $registro->hora_saida,
                     'horas_aberto'   => round($horasAberto, 1),
-                    // true quando passou do limite e o funcionário está bloqueado
-                    'bloqueado'      => $horasAberto > self::MAX_HORAS_TURNO,
+                    'permite_saida_dia_diferente' => $permiteSaidaDiaDiferente,
+                    // Bloqueado de verdade: passou do limite E a unidade permite
+                    // saída em dia diferente (não consegue nem sair nem entrar).
+                    'bloqueado'      => $passouDoLimite && $permiteSaidaDiaDiferente,
+                    // Aviso: passou do limite, mas a unidade não permite saída em
+                    // dia diferente — ele pode bater nova entrada normalmente.
+                    'aviso'          => $passouDoLimite && ! $permiteSaidaDiaDiferente,
                 ];
             }),
             'meta'      => [
                 'total'            => $paginado->total(),
                 'total_bloqueados' => $totalBloqueados,
+                'total_avisos'     => $totalAvisos,
                 'limite_horas'     => self::MAX_HORAS_TURNO,
                 'current_page'     => $paginado->currentPage(),
                 'last_page'        => $paginado->lastPage(),
