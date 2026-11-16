@@ -36,7 +36,14 @@ class BancoHorasService
 
         $minutosRealizados = $this->calcularMinutosRealizados($funcionarioId, $inicio, $fim);
 
-        $saldoMinutos = ($minutosRealizados + $minutosExtra) - $minutosPrevistos;
+        // Funcionário sem nenhuma escala cadastrada no mês não participa do
+        // banco de horas: as horas trabalhadas continuam sendo exibidas como
+        // "realizado", mas não geram saldo (nem positivo nem negativo).
+        $semEscala = $escalasDoMes->isEmpty();
+
+        $saldoMinutos = $semEscala
+            ? 0
+            : ($minutosRealizados + $minutosExtra) - $minutosPrevistos;
 
         return [
             'funcionario_id'      => $funcionarioId,
